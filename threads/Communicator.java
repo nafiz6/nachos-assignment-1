@@ -4,6 +4,7 @@ import java.util.LinkedList;
 
 import javax.swing.plaf.basic.BasicComboBoxUI.KeyHandler;
 
+import jdk.javadoc.internal.doclets.formats.html.SourceToHTMLConverter;
 import nachos.machine.*;
 
 /**
@@ -22,6 +23,7 @@ public class Communicator {
     Condition listening, speaking;
     // listeners sleep on listening, speakers sleep on speaking
     Lock lock;
+    private static int message;
     // LinkedList<KThread> speakers;
     // LinkedList<KThread> listeners;
 
@@ -35,6 +37,7 @@ public class Communicator {
         lock = new Lock(); // has release(), acquire() and isHeldByCurrentThread()
         listening = new Condition(lock); // has sleep(), wake() and wakeAll();
         speaking = new Condition(lock);
+        
 
         // need 2 lists to keep track of speakers and listeners on this communicator
         // object
@@ -96,19 +99,24 @@ public class Communicator {
         */
         
 
-        lock.acquire(); // current thread aka speaker acquires
+        lock.acquire(); // current thread acquires
         
 
         
 
         if (listeners > 0) {
-            System.out.println("speaking");
-            listening.wake(); // idk which thread is woken here
+            // Lib.assertTrue(message != null);
+            System.out.println("speaking message: " + message);
+            message = word;
             listeners--;
+            
+            listening.wake(); 
+            
 
         } else {
             speakers++;
             speaking.sleep();
+            //bug here, after waking up speaker needs to speak
         }
 
         // if (listeners.size() > 0) {
@@ -138,18 +146,25 @@ public class Communicator {
 
         lock.acquire();
 
-        speaking.wake();
-
         
 
         if (speakers > 0) {
-            System.out.println("listening");
-            speaking.wake(); // idk which thread is woken here
-            speakers++;
+            // Lib.assertTrue(message null);
+                
+            System.out.println("listening: found message: " + message);
+
+            
+            
+           
+            
+            speakers--;
+
+            speaking.wake(); 
 
         } else {
             listeners++;
             listening.sleep();
+            //bug here, after waking up listener needs to listen
         }
         lock.release();
 
