@@ -2,9 +2,6 @@ package nachos.threads;
 
 import java.util.LinkedList;
 
-import javax.swing.plaf.basic.BasicComboBoxUI.KeyHandler;
-
-import jdk.javadoc.internal.doclets.formats.html.SourceToHTMLConverter;
 import nachos.machine.*;
 
 /**
