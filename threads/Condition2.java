@@ -11,7 +11,7 @@ import nachos.machine.*;
  * <p>
  * You must implement this.
  *
- * @see	nachos.threads.Condition
+ * @see nachos.threads.Condition
  */
 public class Condition2 {
 	/**

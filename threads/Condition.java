@@ -8,10 +8,11 @@ import java.util.LinkedList;
  * An implementation of condition variables built upon semaphores.
  *
  * <p>
- * A condition variable is a synchronization primitive that does not have
- * a value (unlike a semaphore or a lock), but threads may still be queued.
+ * A condition variable is a synchronization primitive that does not have a
+ * value (unlike a semaphore or a lock), but threads may still be queued.
  *
- * <p><ul>
+ * <p>
+ * <ul>
  *
  * <li><tt>sleep()</tt>: atomically release the lock and relinkquish the CPU
  * until woken; then reacquire the lock.
@@ -39,15 +40,15 @@ import java.util.LinkedList;
  * <p>
  * By contrast, some implementations of condition variables obey
  * <i>Hoare-style</i> semantics, where the thread that calls <tt>wake()</tt>
- * gives up the lock and the CPU to the woken thread, which runs immediately
- * and gives the lock and CPU back to the waker when the woken thread exits the
+ * gives up the lock and the CPU to the woken thread, which runs immediately and
+ * gives the lock and CPU back to the waker when the woken thread exits the
  * critical section.
  *
  * <p>
- * The consequence of using Mesa-style semantics is that some other thread
- * can acquire the lock and change data structures, before the woken thread
- * gets a chance to run. The advance to Mesa-style semantics is that it is a
- * lot easier to implement.
+ * The consequence of using Mesa-style semantics is that some other thread can
+ * acquire the lock and change data structures, before the woken thread gets a
+ * chance to run. The advance to Mesa-style semantics is that it is a lot easier
+ * to implement.
  */
 public class Condition {
 	/**
