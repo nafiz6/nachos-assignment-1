@@ -34,6 +34,7 @@ public class Communicator {
         lock = new Lock(); // has release(), acquire() and isHeldByCurrentThread()
         listening = new Condition(lock); // has sleep(), wake() and wakeAll();
         speaking = new Condition(lock);
+        // transferring = new Condition(lock);
         
 
         // need 2 lists to keep track of speakers and listeners on this communicator
@@ -97,37 +98,22 @@ public class Communicator {
         
 
         lock.acquire(); // current thread acquires
-        
 
-        
-
-        if (listeners > 0) {
-            // Lib.assertTrue(message != null);
-            System.out.println("speaking message: " + message);
-            message = word;
-            listeners--;
-            
-            listening.wake(); 
-            
-
-        } else {
+        if(listeners == 0) {
             speakers++;
             speaking.sleep();
-            //bug here, after waking up speaker needs to speak
+
         }
-
-        // if (listeners.size() > 0) {
-        // // atleast one listener is waiting on this lock
-        // KThread listener = listeners.removeFirst(); //dont think i need this tbh
-        // listening.wake(); // idk which thread is woken here
-        // // send int to listener here
-
-        // } else {
-
-        // speaking.sleep(); // this thread now sleeps on speaking Condition
-        // }
-
+ 
+        // Lib.assertTrue(message != null);
+        System.out.println("speaking message: " + message);
+        message = word;
+        listeners--;
+        
+        listening.wake(); 
         lock.release();
+
+        
 
     }
 
@@ -141,30 +127,23 @@ public class Communicator {
         // KThread listener = KThread.currentThread();
         // listeners.add(listener);
 
-        lock.acquire();
+        lock.acquire(); // current thread acquires
 
-        
-
-        if (speakers > 0) {
-            // Lib.assertTrue(message null);
-                
-            System.out.println("listening: found message: " + message);
-
-            
-            
-           
-            
-            speakers--;
-
-            speaking.wake(); 
-
-        } else {
+        if(speakers == 0) {
             listeners++;
             listening.sleep();
-            //bug here, after waking up listener needs to listen
+
+        } else {
+            speaking.wake(); 
+            listening.sleep();
         }
+
+        
+        // Lib.assertTrue(message != null);
+        System.out.println("listening to message: " + message);
+        speakers--;
         lock.release();
 
-        return 0;
+        return message;
     }
 }
