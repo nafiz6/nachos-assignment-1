@@ -8,7 +8,7 @@ public class Test {
     public static void initiateTest()
     {
         new JoinTest().performTest();
-        new Condition2Test().performTest();
+        //new Condition2Test().performTest();
         new AlarmTest().performTest();
     }
     
@@ -75,6 +75,7 @@ class JoinTest
 
 
 }
+/*
 
 class Condition2Test
 {
@@ -137,6 +138,8 @@ class Condition2Test
 
     Communicator com;
 }
+
+*/
 
 class AlarmTest{
 

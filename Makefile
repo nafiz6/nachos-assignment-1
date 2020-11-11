@@ -28,7 +28,9 @@ vm =		VMKernel VMProcess
 
 network = 	NetKernel NetProcess PostOffice MailMessage
 
-ALLDIRS = machine security ag threads userprog vm network
+proj1 = Test
+
+ALLDIRS = machine security ag threads userprog vm network proj1
 
 PACKAGES := $(patsubst %,nachos.%,$(ALLDIRS))
 
