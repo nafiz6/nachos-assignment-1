@@ -84,7 +84,7 @@ public class Condition {
 		waitQueue.add(waiter);
 
 		conditionLock.release();
-		waiter.P();
+		waiter.P(); //down
 		conditionLock.acquire();	
 	}
 
@@ -96,7 +96,7 @@ public class Condition {
 		Lib.assertTrue(conditionLock.isHeldByCurrentThread());
 
 		if (!waitQueue.isEmpty())
-			((Semaphore) waitQueue.removeFirst()).V();
+			((Semaphore) waitQueue.removeFirst()).V();  //up
 	}
 
 	/**

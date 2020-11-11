@@ -17,57 +17,58 @@ public class Condition2 {
 	/**
 	 * Allocate a new condition variable.
 	 *
-	 * @param	conditionLock	the lock associated with this condition
-	 *				variable. The current thread must hold this
-	 *				lock whenever it uses <tt>sleep()</tt>,
-	 *				<tt>wake()</tt>, or <tt>wakeAll()</tt>.
+	 * @param conditionLock the lock associated with this condition variable. The
+	 *                      current thread must hold this lock whenever it uses
+	 *                      <tt>sleep()</tt>, <tt>wake()</tt>, or
+	 *                      <tt>wakeAll()</tt>.
 	 */
 	public Condition2(Lock conditionLock) {
 		this.conditionLock = conditionLock;
-		waitQueue = new LinkedList<Lock >();
+		waitQueue = new LinkedList<KThread>();
 	}
 
 	/**
 	 * Atomically release the associated lock and go to sleep on this condition
-	 * variable until another thread wakes it using <tt>wake()</tt>. The
-	 * current thread must hold the associated lock. The thread will
-	 * automatically reacquire the lock before <tt>sleep()</tt> returns.
+	 * variable until another thread wakes it using <tt>wake()</tt>. The current
+	 * thread must hold the associated lock. The thread will automatically reacquire
+	 * the lock before <tt>sleep()</tt> returns.
 	 */
 	public void sleep() {
 		Lib.assertTrue(conditionLock.isHeldByCurrentThread());
 
-		Lock waiter = new Lock();
+		// Lock waiter = new Lock();
+		KThread waiter = KThread.currentThread();
 		waitQueue.add(waiter);
 
 		conditionLock.release();
-		waiter.wait();
+		waiter.sleep();
 		conditionLock.acquire();
 	}
 
 	/**
-	 * Wake up at most one thread sleeping on this condition variable. The
-	 * current thread must hold the associated lock.
+	 * Wake up at most one thread sleeping on this condition variable. The current
+	 * thread must hold the associated lock.
 	 */
 	public void wake() {
 		Lib.assertTrue(conditionLock.isHeldByCurrentThread());
 
-		if (!waitQueue.isEmpty()){
-			waitQueue.removeFirst().notify();
+		if (!waitQueue.isEmpty()) {
+			waitQueue.removeFirst().ready();
 		}
 	}
 
 	/**
-	 * Wake up all threads sleeping on this condition variable. The current
-	 * thread must hold the associated lock.
+	 * Wake up all threads sleeping on this condition variable. The current thread
+	 * must hold the associated lock.
 	 */
 	public void wakeAll() {
 		Lib.assertTrue(conditionLock.isHeldByCurrentThread());
-		
-		while (!waitQueue.isEmpty()){
+
+		while (!waitQueue.isEmpty()) {
 			wake();
 		}
 	}
 
 	private Lock conditionLock;
-	private LinkedList<Lock > waitQueue;
+	private LinkedList<KThread> waitQueue;
 }

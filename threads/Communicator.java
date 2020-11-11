@@ -25,7 +25,7 @@ public class Communicator {
     // LinkedList<KThread> speakers;
     // LinkedList<KThread> listeners;
 
-    int speakers; // keeps track of how many speakers and listeners on this object
+    int speakers; // keeps track of how many speakers and listeners waiting on this object
     int listeners;
 
     /**
@@ -52,18 +52,62 @@ public class Communicator {
      * @param word the integer to transfer.
      */
     public void speak(int word) {
-        Kthread speaker = KThread.currentThread();
+        // KThread speaker = KThread.currentThread();
 
         // speakers.add(speaker);
 
+        
+
+            //a,b,c,d,e need f to finish
+        /*
+            Lock lock;
+            Condition cond(lock)
+             a {
+                 lock.acquire();
+                 if(task not done)
+                    cond.sleep()
+                 lock.release();
+             }
+             b {
+                 lock.acquire();
+                 if(task not done)
+                    cond.sleep()
+                 lock.release();
+             }
+            ...
+            e {
+                lock.acquire();
+                if(task not done)
+                    cond.sleep()
+                lock.release();
+            }
+
+            f {
+                lock.acquire();
+                if(task finished) {
+                    cond.wakeAll()
+                }
+                lock.release();
+            }
+
+            
+        
+
+        */
+        
+
         lock.acquire(); // current thread aka speaker acquires
-        speakers++;
+        
+
+        
 
         if (listeners > 0) {
             System.out.println("speaking");
             listening.wake(); // idk which thread is woken here
+            listeners--;
 
         } else {
+            speakers++;
             speaking.sleep();
         }
 
@@ -89,20 +133,22 @@ public class Communicator {
      * @return the integer transferred.
      */
     public int listen() {
-        Kthread listener = KThread.currentThread();
-        listeners.add(listener);
+        // KThread listener = KThread.currentThread();
+        // listeners.add(listener);
 
         lock.acquire();
 
         speaking.wake();
 
-        listeners++;
+        
 
         if (speakers > 0) {
             System.out.println("listening");
             speaking.wake(); // idk which thread is woken here
+            speakers++;
 
         } else {
+            listeners++;
             listening.sleep();
         }
         lock.release();

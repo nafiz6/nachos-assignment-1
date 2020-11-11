@@ -46,14 +46,16 @@ public class Alarm {
      * run.
      */
     public void timerInterrupt() {
-        
 
-        for (ThreadTime t : waitingThreads) {
-            if (t.wakeTime > Machine.timer().getTime()) {
+        for (int i = 0; i < waitingThreads.size(); i++) {
+            ThreadTime t = waitingThreads.get(i);
+            if (Machine.timer().getTime() > t.wakeTime) {
+                waitingThreads.remove(i);
                 t.thread.ready();
             }
         }
-        KThread.currentThread().yield();
+        
+        KThread.yield();
     }
 
     /**
@@ -70,20 +72,16 @@ public class Alarm {
      */
     public void waitUntil(long x) {
         // for now, cheat just to get something working (busy waiting is bad)
-        long wakeTime = Machine.timer().getTime() + x;
 
-        /*
-         * while (wakeTime > Machine.timer().getTime()) KThread.yield(); //this line
-         * makes current thread yield //i think all threads end up waiting here, not
-         * just thread that called it, which is wrong
-         * 
-         */
+        // while (wakeTime > Machine.timer().getTime()) KThread.yield();
 
         // need a list of threads that are currently waiting, along with wakeup times of
         // each thread
         // i guess iterate this list and check which threads can be put to ready state
         // (do this checking inside interrupt handler)
+        long wakeTime = Machine.timer().getTime() + x;
         waitingThreads.add(new ThreadTime(KThread.currentThread(), wakeTime));
+        KThread.sleep();
 
     }
 }
