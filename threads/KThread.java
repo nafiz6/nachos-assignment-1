@@ -187,7 +187,7 @@ public class KThread {
      * destroyed automatically by the next thread to run, when it is safe to delete
      * this thread.
      */
-    public static void finish() {
+    public void finish() {
         Lib.debug(dbgThread, "Finishing thread: " + currentThread.toString());
 
         Machine.interrupt().disable();
@@ -199,9 +199,9 @@ public class KThread {
 
         currentThread.status = statusFinished;
 
-        if (joinerThread != null) {
-            // joiner thread was waiting for this thread to finish, so make it ready
-            joinerThread.ready();
+        if (sleepingThread != null) {
+            // sleeping thread was waiting for this thread to finish, so make it ready
+            sleepingThread.ready();
         }
 
         sleep();
@@ -300,9 +300,11 @@ public class KThread {
 
         /*
          * 
-         * a { ... b.join(); }
+         * a { ... b.join()....; }
          * 
-         * here a is joinerThread b is this
+         * a waits until b is over a blocks b wakes a up once b done
+         * 
+         * here a is sleepingThread b is this
          * 
          */
         Lib.debug(dbgThread, "Joining to thread: " + toString());
@@ -314,37 +316,43 @@ public class KThread {
             return;
         }
 
-        joinerThread = currentThread;
+        if (sleepingThread != null) {
+            return;
+        }
+        sleepingThread = currentThread;
 
         // currently running thread (a) must be the thread that just called this method,
         // so need to put a to sleep
 
-        joinerThread.sleep();
+        sleepingThread.sleep();
 
         // if this (b) is done running, do caller.ready() in finish();
 
     }
 
     /**
-     * Create the idle thread. Whenever there are no threads ready to be run,
-     * and <tt>runNextThread()</tt> is called, it will run the idle thread. The
-     * idle thread must never block, and it will only be allowed to run when
-     * all other threads are blocked.
+     * Create the idle thread. Whenever there are no threads ready to be run, and
+     * <tt>runNextThread()</tt> is called, it will run the idle thread. The idle
+     * thread must never block, and it will only be allowed to run when all other
+     * threads are blocked.
      *
      * <p>
      * Note that <tt>ready()</tt> never adds the idle thread to the ready set.
      */
     private static void createIdleThread() {
-	Lib.assertTrue(idleThread == null);
-	
-	idleThread = new KThread(new Runnable() {
-	    public void run() { while (true) yield(); }
-	});
-	idleThread.setName("idle");
+        Lib.assertTrue(idleThread == null);
 
-	Machine.autoGrader().setIdleThread(idleThread);
-	
-	idleThread.fork();
+        idleThread = new KThread(new Runnable() {
+            public void run() {
+                while (true)
+                    KThread.yield();
+            }
+        });
+        idleThread.setName("idle");
+
+        Machine.autoGrader().setIdleThread(idleThread);
+
+        idleThread.fork();
     }
 
     /**
@@ -487,5 +495,5 @@ public class KThread {
     private static KThread idleThread = null;
 
     // my added vars
-    private static KThread joinerThread = null;
+    private KThread sleepingThread = null;
 }

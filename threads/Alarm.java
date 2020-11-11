@@ -46,9 +46,6 @@ public class Alarm {
      * run.
      */
     public void timerInterrupt() {
-
-        // think about whether to yield currentThread and where exactly to do it inside
-        // this function
         
 
         for (ThreadTime t : waitingThreads) {
