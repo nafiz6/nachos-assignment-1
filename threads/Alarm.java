@@ -49,13 +49,14 @@ public class Alarm {
 
         // think about whether to yield currentThread and where exactly to do it inside
         // this function
-        KThread.currentThread().yield();
+        
 
         for (ThreadTime t : waitingThreads) {
             if (t.wakeTime > Machine.timer().getTime()) {
-                t.thread.yield();
+                t.thread.ready();
             }
         }
+        KThread.currentThread().yield();
     }
 
     /**
