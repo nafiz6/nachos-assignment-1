@@ -14,13 +14,16 @@
 
 void main()
 {
-    char b[10];
-    readline(b, 10);
-    char *execArgs[256];
-    int status1,processID, processID1, processID2, status2;
-    
     printf("\n\n********************************** mypgr Program Loading-test **********************************\n\n");
     printf("mypgr forking echo.coff and joining... \n");
+
+    int a;
+    readline(&a, 1);
+    printf("%d", a);
+
+    /*
+    char *execArgs[256];
+    int status1,processID, processID1, processID2, status2;
     processID = exec("echo.coff", 1,  execArgs);
     int k = join(processID, &status1);
     printf("********* Join On Process %d Finished\nStatus Value:  %d    ***************\n", processID, status1);
@@ -38,6 +41,7 @@ void main()
     printf("*********   Join On Process %d Finished\nStatus Value:  %d   ***************\n", processID1, status1);
     //printf("*********   Join On Process %d Finished\nStatus Value:  %d   ***************\n", processID2, status2);
     
+    */
     halt();
     /* not reached */
 }
