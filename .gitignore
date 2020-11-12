@@ -1,0 +1,8 @@
+
+*.class
+
+*.o
+
+*.coff
+
+.vscode/
