@@ -8,7 +8,7 @@ public class Test {
     public static void initiateTest()
     {
         new JoinTest().performTest();
-        //new Condition2Test().performTest();
+        new Condition2Test().performTest();
         new AlarmTest().performTest();
     }
     
@@ -75,7 +75,7 @@ class JoinTest
 
 
 }
-/*
+
 
 class Condition2Test
 {
@@ -136,10 +136,31 @@ class Condition2Test
         private Communicator com;
     }
 
+    private static class Listener implements Runnable{
+
+        Listener(int which, Communicator com)
+        {
+            this.which = which;
+            this.com = com;
+        }
+        
+        public void run()
+        {
+            for(int i=0; i<3; i++)
+            {
+                KThread.yield();
+                com.listen(i);
+                KThread.yield();
+            }
+        }
+
+        private int which;
+        private Communicator com;
+    }
+
     Communicator com;
 }
 
-*/
 
 class AlarmTest{
 
@@ -167,6 +188,23 @@ class AlarmTest{
 
     public void performTest()
     {
+        System.out.println("testing for task 3 initiated");
+        System.out.println("---------------------------------");
+
+        KThread a1 = new KThread(AlarmTestRunnable(5000,new Alarm())).setName("Alarm thread 1");
+        KThread a2 = new KThread(AlarmTestRunnable(10000,new Alarm())).setName("Alarm thread 2");
+
+        a1.fork();
+        a2.fork();
+
+        a1.join();
+        a2.join();
+
+        System.out.println("---------------------------------");
+        System.out.println("testing for task 3 finished");
+        System.out.println("---------------------------------");
+
 
     }
+
 }
