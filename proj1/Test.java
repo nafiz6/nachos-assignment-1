@@ -191,16 +191,28 @@ class AlarmTest{
         System.out.println("testing for task 3 initiated");
         System.out.println("---------------------------------");
 
+        long t1 = 900000;
+        long t2 = 1000000;
+        long t3 = 600000;
+
         Alarm alarm = new Alarm();
 
-        KThread a1 = new KThread(new AlarmTestRunnable(5000, alarm)).setName("Alarm thread 1");
-        KThread a2 = new KThread(new AlarmTestRunnable(10000, alarm)).setName("Alarm thread 2");
+        KThread a1 = new KThread(new AlarmTestRunnable(t1, alarm)).setName("Alarm thread 1");
+        KThread a2 = new KThread(new AlarmTestRunnable(t2, alarm)).setName("Alarm thread 2");
+        KThread a3 = new KThread(new AlarmTestRunnable(t3, alarm)).setName("Alarm thread 3");
 
-        a1.fork();
+        alarm.waitUntil(t1);
         a2.fork();
+        alarm.waitUntil(t2);
+        a1.fork();
+        alarm.waitUntil(t2);
+        a3.fork();
+
+        KThread.yield();
 
         a1.join();
         a2.join();
+        a3.join();
 
         System.out.println("---------------------------------");
         System.out.println("testing for task 3 finished");
