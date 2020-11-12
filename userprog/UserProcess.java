@@ -370,7 +370,7 @@ public class UserProcess {
         // int stackPages = 8; // this many pages are allocated for this process apart from the space it
                             // already ends up taking at load time, not sure about this yet
 
-        if (numPages + stackPages > UserKernel.freePhysicalPages.size()) {
+        if (numPages > UserKernel.freePhysicalPages.size()) {
             coff.close();
             Lib.debug(dbgProcess, "\tinsufficient physical memory");
             return false;
@@ -380,7 +380,7 @@ public class UserProcess {
 
         for (int i = 0; i < pageTable.length; i++) {
 
-            if (i >= numPages + stackPages) {
+            if (i >= numPages) {
                 pageTable[i].valid = false;
 
             } else {

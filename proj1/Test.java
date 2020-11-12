@@ -172,7 +172,8 @@ class AlarmTest {
         long t2 = 1000000;
         long t3 = 600000;
 
-        Alarm alarm = new Alarm();
+        // Alarm alarm = new Alarm();
+        Alarm alarm = ThreadedKernel.alarm; //creating new Alarm object can cause nachos to become unpredictable
 
         KThread a1 = new KThread(new AlarmTestRunnable(t1, alarm)).setName("Alarm thread 1");
         KThread a2 = new KThread(new AlarmTestRunnable(t2, alarm)).setName("Alarm thread 2");
