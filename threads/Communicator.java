@@ -17,9 +17,11 @@ public class Communicator {
     // both listener and speaker uses the same Communicator object
     // multiple threads can use the same Communicator object, in this case they'll
     // wait until someone speaks or listens on this object too
-    Condition2 listening, speaking;
+    Condition listening, speaking;
+    Condition ListenerReady, speakerReady, waitingForCommunicating, confirmCommunication; 
     // listeners sleep on listening, speakers sleep on speaking
     Lock lock;
+    boolean communicating;
     private static int message;
     // LinkedList<KThread> speakers;
     // LinkedList<KThread> listeners;
@@ -32,10 +34,11 @@ public class Communicator {
      */
     public Communicator() {
         lock = new Lock(); // has release(), acquire() and isHeldByCurrentThread()
-        listening = new Condition2(lock); // has sleep(), wake() and wakeAll();
-        speaking = new Condition2(lock);
-        // transferring = new Condition(lock);
-        
+        listening = new Condition(lock); // has sleep(), wake() and wakeAll();
+        speaking = new Condition(lock);
+        waitingForCommunicating = new Condition(lock);
+        confirmCommunication = new Condition(lock);
+        communicating = false;
 
         // need 2 lists to keep track of speakers and listeners on this communicator
         // object
@@ -53,68 +56,39 @@ public class Communicator {
      * @param word the integer to transfer.
      */
     public void speak(int word) {
-        // KThread speaker = KThread.currentThread();
-
-        // speakers.add(speaker);
-
-        
-
-            //a,b,c,d,e need f to finish
-        /*
-            Lock lock;
-            Condition cond(lock)
-             a {
-                 lock.acquire();
-                 if(task not done)
-                    cond.sleep()
-                 lock.release();
-             }
-             b {
-                 lock.acquire();
-                 if(task not done)
-                    cond.sleep()
-                 lock.release();
-             }
-            ...
-            e {
-                lock.acquire();
-                if(task not done)
-                    cond.sleep()
-                lock.release();
-            }
-
-            f {
-                lock.acquire();
-                if(task finished) {
-                    cond.wakeAll()
-                }
-                lock.release();
-            }
-
-            
-        
-
-        */
-        
+        // a,b,c,d,e need f to finish
 
         lock.acquire(); // current thread acquires
         speakers++;
 
-        if(listeners == 0) {
+        if (listeners == 0) {
             speaking.sleep();
-    
 
         }
- 
+
         // Lib.assertTrue(message != null);
-        System.out.println("speaking message: " + message);
+        // only one speaker listener pair can transfer at a time
+        // if a speaker is waiting for a listener to confirm, then sleep here
+
+        if (communicating) {
+            waitingForCommunicating.sleep();
+        }
         message = word;
-        listeners--;
+        System.out.println(KThread.currentThread().getName() + " speaking message: " + message);
         
-        listening.wake(); 
+
+        listeners--;
+
+        // this speaker must return only when the listener has listened
+        communicating = true;
+        listening.wake();
+        confirmCommunication.sleep();
+        communicating = false;
+        waitingForCommunicating.wake();
+
         lock.release();
 
-        
+        // commm here
 
     }
 
@@ -131,18 +105,26 @@ public class Communicator {
         lock.acquire(); // current thread acquires
         listeners++;
 
-        if(speakers == 0) {
+        if (speakers == 0) {
             listening.sleep();
 
         } else {
-            speaking.wake(); 
+            speaking.wake();
             listening.sleep();
         }
 
-        
+        //listener never needs to sleep on waitingForCommunication because control reaches here only when exactly one speaker has spoken
+
         // Lib.assertTrue(message != null);
-        System.out.println("listening to message: " + message);
+
+        System.out.println(KThread.currentThread().getName() + " listening to message: " + message);
         speakers--;
+
+        // need to wake speaker up to tell them that i've listened
+        // if (communicating) {
+            confirmCommunication.wake();
+        // }
+
         lock.release();
 
         return message;

@@ -13,6 +13,21 @@ import nachos.machine.*;
  *
  * @see nachos.threads.Condition
  */
+
+
+
+     /*
+         * Lock lock; Condition cond(lock) a { lock.acquire(); if(task not done)
+         * cond.sleep() lock.release(); } b { lock.acquire(); if(task not done)
+         * cond.sleep() lock.release(); } ... e { lock.acquire(); if(task not done)
+         * cond.sleep() lock.release(); }
+         * 
+         * f { lock.acquire(); if(task finished) { cond.wakeAll() } lock.release(); }
+         * 
+         * 
+         * 
+         * 
+         */
 public class Condition2 {
 	/**
 	 * Allocate a new condition variable.

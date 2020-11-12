@@ -5,21 +5,19 @@ import nachos.machine.*;
 
 public class Test {
 
-    public static void initiateTest()
-    {
+    public static void initiateTest() {
         new JoinTest().performTest();
         new Condition2Test().performTest();
         new AlarmTest().performTest();
     }
-    
+
 }
 
-class JoinTest
-{
-    public JoinTest(){}
+class JoinTest {
+    public JoinTest() {
+    }
 
-    public void performTest()
-    {
+    public void performTest() {
         System.out.println("testing for task 1 initiated");
         System.out.println("-------------------------------");
 
@@ -52,49 +50,40 @@ class JoinTest
 
     }
 
-    private static class PingTest implements Runnable{
+    private static class PingTest implements Runnable {
 
-        PingTest(int which)
-        {
+        PingTest(int which) {
             this.which = which;
         }
 
-        public void run()
-        {
-            for(int i=0; i<5; i++)
-            {
-                System.out.println("*** thread " + which + " looped "
-                 + i + " times");
+        public void run() {
+            for (int i = 0; i < 5; i++) {
+                System.out.println("*** thread " + which + " looped " + i + " times");
 
-                 KThread.yield();
+                KThread.yield();
             }
         }
 
         private final int which;
     }
 
-
 }
 
-
-class Condition2Test
-{
-    public Condition2Test()
-    {
+class Condition2Test {
+    public Condition2Test() {
         com = new Communicator();
     }
 
-    public void performTest()
-    {
+    public void performTest() {
         System.out.println("testing for task 2 & 4 initiated");
         System.out.println("---------------------------------");
 
-        KThread l1 = new KThread(new Listener(1,com)).setName("listener thread 1");
-        KThread l2 = new KThread(new Listener(2,com)).setName("listener thread 2");
+        KThread l1 = new KThread(new Listener(1, com)).setName("listener thread 1");
+        KThread l2 = new KThread(new Listener(2, com)).setName("listener thread 2");
 
-        KThread s1 = new KThread(new Speaker(1,com)).setName("speaker thread 1"); 
-        KThread s2 = new KThread(new Speaker(2,com)).setName("speaker thread 2");
-        KThread s3 = new KThread(new Speaker(3,com)).setName("speaker thread 3");
+        KThread s1 = new KThread(new Speaker(1, com)).setName("speaker thread 1");
+        KThread s2 = new KThread(new Speaker(2, com)).setName("speaker thread 2");
+        KThread s3 = new KThread(new Speaker(3, com)).setName("speaker thread 3");
 
         l1.fork();
         l2.fork();
@@ -114,18 +103,15 @@ class Condition2Test
 
     }
 
-    private static class Speaker implements Runnable{
+    private static class Speaker implements Runnable {
 
-        Speaker(int which, Communicator com)
-        {
+        Speaker(int which, Communicator com) {
             this.which = which;
             this.com = com;
         }
-        
-        public void run()
-        {
-            for(int i=0; i<2; i++)
-            {
+
+        public void run() {
+            for (int i = 0; i < 2; i++) {
                 KThread.yield();
                 com.speak(i);
                 KThread.yield();
@@ -136,18 +122,15 @@ class Condition2Test
         private Communicator com;
     }
 
-    private static class Listener implements Runnable{
+    private static class Listener implements Runnable {
 
-        Listener(int which, Communicator com)
-        {
+        Listener(int which, Communicator com) {
             this.which = which;
             this.com = com;
         }
-        
-        public void run()
-        {
-            for(int i=0; i<3; i++)
-            {
+
+        public void run() {
+            for (int i = 0; i < 3; i++) {
                 KThread.yield();
                 com.listen();
                 KThread.yield();
@@ -161,24 +144,19 @@ class Condition2Test
     Communicator com;
 }
 
+class AlarmTest {
 
-class AlarmTest{
+    private static class AlarmTestRunnable implements Runnable {
 
-    private static class AlarmTestRunnable implements Runnable{
-
-        AlarmTestRunnable(long time, Alarm alarm)
-        {
+        AlarmTestRunnable(long time, Alarm alarm) {
             this.time = time;
             this.alarm = alarm;
         }
 
-        public void run()
-        {
-            System.out.println(KThread.currentThread().getName() + 
-            "rings at " + Machine.timer().getTime());
+        public void run() {
+            System.out.println(KThread.currentThread().getName() + "rings at " + Machine.timer().getTime());
             alarm.waitUntil(time);
-            System.out.println(KThread.currentThread().getName() + 
-            "rings at " + Machine.timer().getTime());
+            System.out.println(KThread.currentThread().getName() + "rings at " + Machine.timer().getTime());
         }
 
         private final long time;
@@ -186,8 +164,7 @@ class AlarmTest{
 
     }
 
-    public void performTest()
-    {
+    public void performTest() {
         System.out.println("testing for task 3 initiated");
         System.out.println("---------------------------------");
 
@@ -217,7 +194,6 @@ class AlarmTest{
         System.out.println("---------------------------------");
         System.out.println("testing for task 3 finished");
         System.out.println("---------------------------------");
-
 
     }
 
