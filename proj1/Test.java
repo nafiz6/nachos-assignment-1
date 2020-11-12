@@ -191,8 +191,8 @@ class AlarmTest{
         System.out.println("testing for task 3 initiated");
         System.out.println("---------------------------------");
 
-        KThread a1 = new KThread(AlarmTestRunnable(5000,new Alarm())).setName("Alarm thread 1");
-        KThread a2 = new KThread(AlarmTestRunnable(10000,new Alarm())).setName("Alarm thread 2");
+        KThread a1 = new KThread(new AlarmTestRunnable(5000,new Alarm())).setName("Alarm thread 1");
+        KThread a2 = new KThread(new AlarmTestRunnable(10000,new Alarm())).setName("Alarm thread 2");
 
         a1.fork();
         a2.fork();
