@@ -46,14 +46,18 @@ public class Alarm {
      * run.
      */
     public void timerInterrupt() {
+        
 
         for (int i = 0; i < waitingThreads.size(); i++) {
             ThreadTime t = waitingThreads.get(i);
             if (Machine.timer().getTime() > t.wakeTime) {
                 waitingThreads.remove(i);
+                Machine.interrupt().disable();
                 t.thread.ready();
+                Machine.interrupt().enable();
             }
         }
+        
         
         KThread.yield();
     }
@@ -81,7 +85,9 @@ public class Alarm {
         // (do this checking inside interrupt handler)
         long wakeTime = Machine.timer().getTime() + x;
         waitingThreads.add(new ThreadTime(KThread.currentThread(), wakeTime));
+        Machine.interrupt().disable();
         KThread.sleep();
+        Machine.interrupt().enable();
 
     }
 }

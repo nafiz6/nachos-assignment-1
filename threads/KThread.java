@@ -167,7 +167,9 @@ public class KThread {
         
         if (sleepingThread != null) {   //doing this here because finish() and sleep() are both static methods 
             // sleeping thread was waiting for this thread to finish, so make it ready
+            Machine.interrupt().disable();
             sleepingThread.ready();
+            Machine.interrupt().enable();
         }
         finish();
     }
@@ -325,8 +327,10 @@ public class KThread {
 
         // currently running thread (a) must be the thread that just called this method,
         // so need to put a to sleep
+        Machine.interrupt().disable();
 
         sleepingThread.sleep();
+        Machine.interrupt().enable();
 
         // if this (b) is done running, do caller.ready() in finish();
 

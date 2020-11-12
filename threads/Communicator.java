@@ -17,7 +17,7 @@ public class Communicator {
     // both listener and speaker uses the same Communicator object
     // multiple threads can use the same Communicator object, in this case they'll
     // wait until someone speaks or listens on this object too
-    Condition listening, speaking;
+    Condition2 listening, speaking;
     // listeners sleep on listening, speakers sleep on speaking
     Lock lock;
     private static int message;
@@ -32,8 +32,8 @@ public class Communicator {
      */
     public Communicator() {
         lock = new Lock(); // has release(), acquire() and isHeldByCurrentThread()
-        listening = new Condition(lock); // has sleep(), wake() and wakeAll();
-        speaking = new Condition(lock);
+        listening = new Condition2(lock); // has sleep(), wake() and wakeAll();
+        speaking = new Condition2(lock);
         // transferring = new Condition(lock);
         
 
@@ -98,10 +98,11 @@ public class Communicator {
         
 
         lock.acquire(); // current thread acquires
+        speakers++;
 
         if(listeners == 0) {
-            speakers++;
             speaking.sleep();
+    
 
         }
  
@@ -128,9 +129,9 @@ public class Communicator {
         // listeners.add(listener);
 
         lock.acquire(); // current thread acquires
+        listeners++;
 
         if(speakers == 0) {
-            listeners++;
             listening.sleep();
 
         } else {

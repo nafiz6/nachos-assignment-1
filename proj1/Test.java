@@ -149,7 +149,7 @@ class Condition2Test
             for(int i=0; i<3; i++)
             {
                 KThread.yield();
-                com.listen(i);
+                com.listen();
                 KThread.yield();
             }
         }
@@ -191,8 +191,10 @@ class AlarmTest{
         System.out.println("testing for task 3 initiated");
         System.out.println("---------------------------------");
 
-        KThread a1 = new KThread(new AlarmTestRunnable(5000,new Alarm())).setName("Alarm thread 1");
-        KThread a2 = new KThread(new AlarmTestRunnable(10000,new Alarm())).setName("Alarm thread 2");
+        Alarm alarm = new Alarm();
+
+        KThread a1 = new KThread(new AlarmTestRunnable(5000, alarm)).setName("Alarm thread 1");
+        KThread a2 = new KThread(new AlarmTestRunnable(10000, alarm)).setName("Alarm thread 2");
 
         a1.fork();
         a2.fork();

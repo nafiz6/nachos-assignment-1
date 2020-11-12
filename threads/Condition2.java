@@ -41,7 +41,9 @@ public class Condition2 {
 		waitQueue.add(waiter);
 
 		conditionLock.release();
+		Machine.interrupt().disable();
 		waiter.sleep();
+		Machine.interrupt().enable();
 		conditionLock.acquire();
 	}
 
@@ -51,10 +53,12 @@ public class Condition2 {
 	 */
 	public void wake() {
 		Lib.assertTrue(conditionLock.isHeldByCurrentThread());
-
+		Machine.interrupt().disable();
 		if (!waitQueue.isEmpty()) {
+			
 			waitQueue.removeFirst().ready();
 		}
+		Machine.interrupt().enable();
 	}
 
 	/**
