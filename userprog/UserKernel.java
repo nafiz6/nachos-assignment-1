@@ -1,5 +1,7 @@
 package nachos.userprog;
 
+import java.util.LinkedList;
+
 import nachos.machine.*;
 import nachos.threads.*;
 import nachos.userprog.*;
@@ -11,6 +13,7 @@ public class UserKernel extends ThreadedKernel {
     /**
      * Allocate a new user kernel.
      */
+
     public UserKernel() {
         super();
     }
@@ -23,6 +26,17 @@ public class UserKernel extends ThreadedKernel {
         super.initialize(args);
 
         console = new SynchConsole(Machine.console());
+
+
+        //added code
+        // initially, all pages in phys memory are free
+        freePhysicalPages = new LinkedList<>();
+        int numPhysicalPages = Machine.processor().getNumPhysPages();
+        for (int i = 0; i < numPhysicalPages; i++) {
+            freePhysicalPages.add(i);   //idk if things other than user processes use memory
+        }
+
+        //end
 
         Machine.processor().setExceptionHandler(new Runnable() {
             public void run() {
@@ -112,4 +126,6 @@ public class UserKernel extends ThreadedKernel {
 
     // dummy variables to make javac smarter
     private static Coff dummy1 = null;
+
+    public static LinkedList<Integer> freePhysicalPages; // tells me which physical pages are free
 }

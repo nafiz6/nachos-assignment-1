@@ -8,16 +8,16 @@ import java.io.EOFException;
 import java.io.FileDescriptor;
 
 /**
- * Encapsulates the state of a user process that is not contained in its
- * user thread (or threads). This includes its address translation state, a
- * file table, and information about the program being executed.
+ * Encapsulates the state of a user process that is not contained in its user
+ * thread (or threads). This includes its address translation state, a file
+ * table, and information about the program being executed.
  *
  * <p>
  * This class is extended by other classes to support additional functionality
  * (such as additional syscalls).
  *
- * @see	nachos.vm.VMProcess
- * @see	nachos.network.NetProcess
+ * @see nachos.vm.VMProcess
+ * @see nachos.network.NetProcess
  */
 public class UserProcess {
     /**
@@ -25,12 +25,16 @@ public class UserProcess {
      */
     public UserProcess() {
         int numPhysPages = Machine.processor().getNumPhysPages();
+
+        // on context switches, this pageTable gets saved onto processor
+
         pageTable = new TranslationEntry[numPhysPages];
+
         for (int i = 0; i < numPhysPages; i++)
             pageTable[i] = new TranslationEntry(i, i, true, false, false, false);
 
-        //added code
-        if (rootProcess == null){
+        // added code
+        if (rootProcess == null) {
             rootProcess = this;
         }
     }
@@ -58,7 +62,6 @@ public class UserProcess {
         System.out.flush();
         if (!load(name, args))
             return false;
-
 
         new UThread(this).setName(name).fork();
 
@@ -133,16 +136,51 @@ public class UserProcess {
      * @return the number of bytes successfully transferred.
      */
     public int readVirtualMemory(int vaddr, byte[] data, int offset, int length) {
+
         Lib.assertTrue(offset >= 0 && length >= 0 && offset + length <= data.length);
+
+        // here offset if the starting point of the destination (ie data) array
+
+        // this reads length bytes from virtual memory.
 
         byte[] memory = Machine.processor().getMemory();
 
         // for now, just assume that virtual addresses equal physical addresses
-        if (vaddr < 0 || vaddr >= memory.length)
-            return 0;
 
-        int amount = Math.min(length, memory.length - vaddr);
-        System.arraycopy(memory, vaddr, data, offset, amount);
+        // if (vaddr < 0 || vaddr >= memory.length)
+        // return 0;
+
+        // added
+        if (vaddr < 0 || vaddr >= pageTable.length * pageSize)
+            return 0;
+        // end
+
+        // int amount = Math.min(length, memory.length - vaddr);
+        // added
+        int amount = Math.min(length, pageTable.length * pageSize - vaddr); // so if length is such that writing exceeds
+        // physical/virtual memory bounds, then only read upto
+        // max memory index
+        // added
+
+        for (int i = 0; i < amount / pageSize; i++) {
+            int vpn = vaddr * pageSize + i;
+
+            int remaining = amount - (i * pageSize);
+            int readLimit = Math.min(pageSize, remaining);
+
+            for (int j = 0; j < readLimit; j++) {
+
+                int physicalMemoryIndex = pageTable[vpn].ppn + j;
+
+                int dataIndex = offset + i * pageSize + j;
+
+                data[dataIndex] = memory[physicalMemoryIndex];
+
+            }
+
+        }
+
+        // System.arraycopy(memory, vaddr, data, offset, amount);
 
         return amount;
     }
@@ -178,11 +216,47 @@ public class UserProcess {
         byte[] memory = Machine.processor().getMemory();
 
         // for now, just assume that virtual addresses equal physical addresses
-        if (vaddr < 0 || vaddr >= memory.length)
+        // if (vaddr < 0 || vaddr >= memory.length)
+        // return 0;
+
+        if (vaddr < 0 || vaddr >= pageTable.length * pageSize)
             return 0;
 
-        int amount = Math.min(length, memory.length - vaddr);
-        System.arraycopy(data, offset, memory, vaddr, amount);
+        // int amount = Math.min(length, memory.length - vaddr);
+
+        int amount = Math.min(length, pageTable.length * pageSize - vaddr);
+
+        // for (int i = offset; i < amount; i++) {
+        // memory[pageTable[vaddr + i].ppn] = data[i];
+
+        // }
+
+        // int bytesWritten = amount;
+
+        for (int i = 0; i < amount / pageSize; i++) {
+
+            // if (pageTable[i + vaddr].readOnly) {
+            //     // cant write to this page, so skip
+            //     bytesWritten = bytesWritten - pageSize;
+            //     continue;
+            // }
+            int vpn = vaddr * pageSize + i;
+
+            int remaining = amount - (i * pageSize);
+            int readLimit = Math.min(pageSize, remaining);
+
+            for (int j = 0; j < readLimit; j++) {
+
+                int physicalMemoryIndex = pageTable[vpn].ppn + j;
+
+                int dataIndex = offset + i * pageSize + j;
+
+                memory[physicalMemoryIndex] = data[dataIndex];
+            }
+
+        }
+
+        // System.arraycopy(data, offset, memory, vaddr, amount);
 
         return amount;
     }
@@ -281,13 +355,43 @@ public class UserProcess {
      * @return <tt>true</tt> if the sections were successfully loaded.
      */
     protected boolean loadSections() {
+
         if (numPages > Machine.processor().getNumPhysPages()) {
             coff.close();
             Lib.debug(dbgProcess, "\tinsufficient physical memory");
             return false;
         }
 
+
+        //add
+        // setup pageTable here, which maps i vpn to i ppn in constructor
+        // get free spaces from UKernel.freePages, and add these to pageTable's entries'
+        // ppn's
+        // int stackPages = 8; // this many pages are allocated for this process apart from the space it
+                            // already ends up taking at load time, not sure about this yet
+
+        if (numPages + stackPages > UserKernel.freePhysicalPages.size()) {
+            coff.close();
+            Lib.debug(dbgProcess, "\tinsufficient physical memory");
+            return false;
+
+        }
+        
+
+        for (int i = 0; i < pageTable.length; i++) {
+
+            if (i >= numPages + stackPages) {
+                pageTable[i].valid = false;
+
+            } else {
+                pageTable[i].ppn = UserKernel.freePhysicalPages.removeFirst();
+               
+            }
+        }
+        //end
+
         // load sections
+
         for (int s = 0; s < coff.getNumSections(); s++) {
             CoffSection section = coff.getSection(s);
 
@@ -295,10 +399,22 @@ public class UserProcess {
                     "\tinitializing " + section.getName() + " section (" + section.getLength() + " pages)");
 
             for (int i = 0; i < section.getLength(); i++) {
-                int vpn = section.getFirstVPN() + i;
 
+                int vpn = section.getFirstVPN() + i;    //we assume that they know that our pageTable config
+
+                //add
+                pageTable[vpn].readOnly = section.isReadOnly();
+                // pageTable[vpn].valid = section.isInitialzed(); // not sure about this yet
+
+                int ppn = pageTable[vpn].ppn;
+
+                //end
                 // for now, just assume virtual addresses=physical addresses
-                section.loadPage(i, vpn);
+                // section.loadPage(i, vpn);
+                //add
+                section.loadPage(i, ppn);
+
+                //end
             }
         }
 
@@ -309,6 +425,8 @@ public class UserProcess {
      * Release any resources allocated by <tt>loadSections()</tt>.
      */
     protected void unloadSections() {
+        // idk if we should implement this, if we do, add pages to free pages linked
+        // list here
     }
 
     /**
@@ -338,8 +456,9 @@ public class UserProcess {
      * Handle the halt() system call.
      */
     private int handleHalt() {
-        //added code
-        if (this != rootProcess)return 0;
+        // added code
+        if (this != rootProcess)
+            return 0;
 
         System.out.println("HALT CALLED");
         System.out.flush();
@@ -349,21 +468,17 @@ public class UserProcess {
         return 0;
     }
 
-    //added code
+    // added code
     /**
      * Handle the read() system call.
      */
     private int handleRead(int fileDescriptor, int buffer, int size) {
-        if (fileDescriptor != 0 && fileDescriptor != 1)return -1;
+        if (fileDescriptor != 0)
+            return -1;
 
         OpenFile file = UserKernel.console.openForReading();
         byte[] buf = Machine.processor().getMemory();
-        //System.out.println((char)buf[buffer]);
-        System.out.println("READ CALLED");
-        System.out.println("params " + fileDescriptor + " " + buffer + " " + size );
-        System.out.flush();
 
-        
         int readSize = file.read(buf, buffer, size);
         file.close();
         return readSize;
@@ -373,17 +488,13 @@ public class UserProcess {
      * Handle the write() system call.
      */
     private int handleWrite(int fileDescriptor, int buffer, int size) {
-        if (fileDescriptor != 0 && fileDescriptor != 1)return -1;
+        if (fileDescriptor != 1)
+            return -1;
         OpenFile file = UserKernel.console.openForWriting();
         byte[] buf = Machine.processor().getMemory();
-
-        System.out.println("params " + fileDescriptor + " " + buffer + " " + size );
-        System.out.println("WRITE CALLED");
-        System.out.flush();
-
         int writeSize = file.write(buf, buffer, size);
         file.close();
-        
+
         return writeSize;
     }
 
