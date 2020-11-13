@@ -7,9 +7,9 @@ public class Test {
 
     public static void initiateTest() {
 
-        new JoinTest().performTest();
-        new Condition2Test().performTest();
-        new AlarmTest().performTest();
+        // new JoinTest().performTest();
+        // new Condition2Test().performTest();
+        // new AlarmTest().performTest();
 
     }
 
@@ -113,7 +113,7 @@ class Condition2Test {
         }
 
         public void run() {
-            for (int i = 0; i < 2; i++) {
+            for (int i = 0; i < 2000000; i++) {
                 KThread.yield();
                 com.speak(i);
                 KThread.yield();
@@ -132,7 +132,7 @@ class Condition2Test {
         }
 
         public void run() {
-            for (int i = 0; i < 3; i++) {
+            for (int i = 0; i < 3000000; i++) {
                 KThread.yield();
                 com.listen();
                 KThread.yield();

@@ -14,20 +14,18 @@ import nachos.machine.*;
  * @see nachos.threads.Condition
  */
 
-
-
-     /*
-         * Lock lock; Condition cond(lock) a { lock.acquire(); if(task not done)
-         * cond.sleep() lock.release(); } b { lock.acquire(); if(task not done)
-         * cond.sleep() lock.release(); } ... e { lock.acquire(); if(task not done)
-         * cond.sleep() lock.release(); }
-         * 
-         * f { lock.acquire(); if(task finished) { cond.wakeAll() } lock.release(); }
-         * 
-         * 
-         * 
-         * 
-         */
+/*
+ * Lock lock; Condition cond(lock) a { lock.acquire(); if(task not done)
+ * cond.sleep() lock.release(); } b { lock.acquire(); if(task not done)
+ * cond.sleep() lock.release(); } ... e { lock.acquire(); if(task not done)
+ * cond.sleep() lock.release(); }
+ * 
+ * f { lock.acquire(); if(task finished) { cond.wakeAll() } lock.release(); }
+ * 
+ * 
+ * 
+ * 
+ */
 public class Condition2 {
 	/**
 	 * Allocate a new condition variable.
@@ -52,14 +50,16 @@ public class Condition2 {
 		Lib.assertTrue(conditionLock.isHeldByCurrentThread());
 
 		// Lock waiter = new Lock();
+
+		Machine.interrupt().disable();
 		KThread waiter = KThread.currentThread();
 		waitQueue.add(waiter);
 
 		conditionLock.release();
-		Machine.interrupt().disable();
 		waiter.sleep();
-		Machine.interrupt().enable();
 		conditionLock.acquire();
+		Machine.interrupt().enable();
+		
 	}
 
 	/**
@@ -70,7 +70,7 @@ public class Condition2 {
 		Lib.assertTrue(conditionLock.isHeldByCurrentThread());
 		Machine.interrupt().disable();
 		if (!waitQueue.isEmpty()) {
-			
+
 			waitQueue.removeFirst().ready();
 		}
 		Machine.interrupt().enable();

@@ -203,7 +203,11 @@ public class UserProcess {
             if (i == 0) {
                 // this is first page accessed, so take startOffset into account
                 start = pageTable[vpn].ppn * pageSize + startOffset;
-                // readLimit -= startOffset;
+
+                if(readLimit == pageSize) {
+                    readLimit = readLimit - startOffset;
+                }
+                
 
             }
 
@@ -303,7 +307,10 @@ public class UserProcess {
             if (i == 0) {
                 // this is first page accessed, so take startOffset into account
                 start = pageTable[vpn].ppn * pageSize + startOffset;
-                // writeLimit -= startOffset;
+                if(writeLimit == pageSize) {
+                    writeLimit = writeLimit - startOffset;
+                }
+                
 
             }
 
@@ -687,7 +694,7 @@ public class UserProcess {
         uThread.wakeSleepingThread();
 
         activeProcessesLock.acquire();
-        
+
         if (activeProcesses == 0) {
             activeProcessesLock.release();
             Kernel.kernel.terminate();

@@ -22,7 +22,7 @@ public class Communicator {
     // listeners sleep on listening, speakers sleep on speaking
     Lock lock;
     boolean communicating;
-    private static int message;
+    private int message;
     // LinkedList<KThread> speakers;
     // LinkedList<KThread> listeners;
 
@@ -66,17 +66,17 @@ public class Communicator {
 
         }
 
+        while (communicating) {
+            waitingForCommunicating.sleep();
+        }
+
         // Lib.assertTrue(message != null);
         // only one speaker listener pair can transfer at a time
         // if a speaker is waiting for a listener to confirm, then sleep here
 
-        if (communicating) {
-            waitingForCommunicating.sleep();
-        }
         message = word;
+        System.out.println();
         System.out.println(KThread.currentThread().getName() + " speaking message: " + message);
-
-        listeners--;
 
         // this speaker must return only when the listener has listened
         communicating = true;
@@ -84,10 +84,9 @@ public class Communicator {
         confirmCommunication.sleep();
         communicating = false;
         waitingForCommunicating.wake();
+        speakers--;
 
         lock.release();
-
-        // commm here
 
     }
 
@@ -118,13 +117,14 @@ public class Communicator {
         // Lib.assertTrue(message != null);
 
         System.out.println(KThread.currentThread().getName() + " listening to message: " + message);
-        speakers--;
+        System.out.println();
 
         // need to wake speaker up to tell them that i've listened
         // if (communicating) {
         confirmCommunication.wake();
         // }
 
+        listeners--;
         lock.release();
 
         return message;
