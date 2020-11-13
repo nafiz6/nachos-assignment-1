@@ -179,51 +179,64 @@ public class UserProcess {
 
         // int amount = Math.min(length, memory.length - vaddr);
         // added
-        int amount = Math.min(length, getMaxVirtualAddr() - vaddr + 1); // so if length is such that writing exceeds
+        int amount = Math.min(length, getMaxVirtualAddr() - vaddr + 1);
+        // so if length is such that writing exceeds
         // physical/virtual memory bounds, then only read upto
         // max memory index
         // added
-        int pagesToRead = amount / pageSize;
+
+        int lastPage = (vaddr + amount) / pageSize;
         int firstPage = vaddr / pageSize;
+        int pagesToRead = lastPage - firstPage + 1;
 
         int startOffset = vaddr % pageSize;
+
+        int remaining = amount;
+
+        int bytesRead = 0;
 
         for (int i = 0; i <= pagesToRead; i++) {
 
             int vpn = firstPage + i;
 
-            int remaining = amount - (i * pageSize);
+            // ----- ----- ----- ----- ----- -----
+
+
+
+            // remaining = Math.min(pageSize - startOffset, amount);
+
+            // remaining = amount - (i * pageSize);
+
+
+          
+            // System.out.println("REMAINING: " + remaining);
             int readLimit = Math.min(pageSize, remaining);
 
-            pageTable[vpn].used = true;
+            if(i == 0) {
+                readLimit = Math.min(pageSize - startOffset - 1 , amount);
+                
+            }
 
-            // bug when vaddr isnt start of page
+            remaining -= readLimit;
+            
+
+            pageTable[vpn].used = true;
 
             int start = pageTable[vpn].ppn * pageSize; // if page isnt first page, start will always be start of page
             if (i == 0) {
                 // this is first page accessed, so take startOffset into account
-                start = pageTable[vpn].ppn * pageSize + startOffset;
+                start += startOffset;
 
-                if(readLimit == pageSize) {
-                    readLimit = readLimit - startOffset;
-                }
-                
+                // if (readLimit == pageSize) {
+                //     readLimit = readLimit - startOffset;
+                // }
 
             }
 
-            System.arraycopy(memory, start, data, offset + i * pageSize, readLimit);
+           
 
-            // for (int j = 0; j < readLimit; j++) {
-
-            // int physicalMemoryIndex = pageTable[vpn].ppn * pageSize + j;
-
-            // // System.out.println(physicalMemoryIndex);
-
-            // int dataIndex = offset + i * pageSize + j;
-
-            // data[dataIndex] = memory[physicalMemoryIndex];
-
-            // }
+            System.arraycopy(memory, start, data, offset + bytesRead, readLimit);
+            bytesRead += readLimit;
 
         }
 
@@ -288,6 +301,10 @@ public class UserProcess {
 
         int startOffset = vaddr % pageSize;
 
+        int remaining = amount;
+
+        int bytesWritten = 0;
+
         for (int i = 0; i <= pagesToRead; i++) {
 
             // if (pageTable[i + vaddr].readOnly) {
@@ -295,10 +312,25 @@ public class UserProcess {
             // bytesWritten = bytesWritten - pageSize;
             // continue;
             // }
+
+
+
             int vpn = firstPage + i;
 
-            int remaining = amount - (i * pageSize);
             int writeLimit = Math.min(pageSize, remaining);
+
+            if(i == 0) {
+                writeLimit = Math.min(pageSize - startOffset - 1, amount);
+                
+            }
+
+            remaining -= writeLimit;
+
+
+
+
+            // int remaining = amount - (i * pageSize);
+            // int writeLimit = Math.min(pageSize, remaining);
 
             pageTable[vpn].used = true;
             pageTable[vpn].dirty = true;
@@ -306,24 +338,16 @@ public class UserProcess {
             int start = pageTable[vpn].ppn * pageSize; // if page isnt first page, start will always be start of page
             if (i == 0) {
                 // this is first page accessed, so take startOffset into account
-                start = pageTable[vpn].ppn * pageSize + startOffset;
-                if(writeLimit == pageSize) {
-                    writeLimit = writeLimit - startOffset;
-                }
-                
+                start += startOffset;
+
+                // if (writeLimit == pageSize) {
+                //     writeLimit = writeLimit - startOffset;
+                // }
 
             }
 
-            System.arraycopy(data, offset + i * pageSize, memory, start, writeLimit);
-            /*
-             * for (int j = 0; j < readLimit; j++) {
-             * 
-             * int physicalMemoryIndex = pageTable[vpn].ppn * pageSize + j;
-             * 
-             * int dataIndex = offset + i * pageSize + j;
-             * 
-             * memory[physicalMemoryIndex] = data[dataIndex]; }
-             */
+            System.arraycopy(data, offset + bytesWritten, memory, start, writeLimit);
+            bytesWritten += writeLimit;
 
         }
 
@@ -458,7 +482,9 @@ public class UserProcess {
 
             } else {
                 UserKernel.lock.acquire();
-                pageTable[i].ppn = UserKernel.freePhysicalPages.removeLast();
+
+                pageTable[i].ppn = UserKernel.freePhysicalPages.remove(17 % UserKernel.freePhysicalPages.size());
+
                 UserKernel.lock.release();
             }
         }
@@ -552,7 +578,7 @@ public class UserProcess {
             return -1;
         }
 
-        if (bufferAddr < 0 || bufferAddr > getMaxVirtualAddr()){
+        if (bufferAddr < 0 || bufferAddr > getMaxVirtualAddr()) {
             return -1;
         }
 
@@ -581,7 +607,7 @@ public class UserProcess {
             return -1;
         }
 
-        if (bufferAddr < 0 || bufferAddr > getMaxVirtualAddr()){
+        if (bufferAddr < 0 || bufferAddr > getMaxVirtualAddr()) {
             return -1;
         }
 
@@ -645,7 +671,7 @@ public class UserProcess {
 
         // wait until process over?
         toJoin.uThread.join();
-        //System.out.println("JOIN ENDED");
+        // System.out.println("JOIN ENDED");
 
         // remove from childproccesses
         childProcessesId.remove((Integer) processIdToJoin);
