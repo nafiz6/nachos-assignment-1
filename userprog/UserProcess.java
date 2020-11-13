@@ -5,7 +5,9 @@ import nachos.threads.*;
 import nachos.userprog.*;
 
 import java.io.EOFException;
-import java.util.HashSet;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 
 /**
  * Encapsulates the state of a user process that is not contained in its user
@@ -29,6 +31,11 @@ public class UserProcess {
         processId = processCount;
         processCount++;
         processIdMap.put(processId, this);
+        exitStatus = -1;
+
+        stdIn = UserKernel.console.openForReading();
+        stdOut = UserKernel.console.openForWriting();
+
 
         // on context switches, this pageTable gets saved onto processor
 
@@ -157,13 +164,13 @@ public class UserProcess {
         // return 0;
 
         // added
-        if (vaddr < 0 || vaddr >= pageTable.length * pageSize)
+        if (vaddr < 0 || vaddr >= getMaxVirtualAddr())
             return 0;
         // end
 
         // int amount = Math.min(length, memory.length - vaddr);
         // added
-        int amount = Math.min(length, pageTable.length * pageSize - vaddr); // so if length is such that writing exceeds
+        int amount = Math.min(length, getMaxVirtualAddr() - vaddr); // so if length is such that writing exceeds
         // physical/virtual memory bounds, then only read upto
         // max memory index
         // added
@@ -172,8 +179,8 @@ public class UserProcess {
             int vpn = vaddr * pageSize + i;
 
             int remaining = amount - (i * pageSize);
-            int readLimit = Math.min(pageSize, remaining);
-
+            int readLimit = Math.min(pageSize, remaining);                
+            pageTable[vpn].used = true;
             for (int j = 0; j < readLimit; j++) {
 
                 int physicalMemoryIndex = pageTable[vpn].ppn + j;
@@ -225,12 +232,12 @@ public class UserProcess {
         // if (vaddr < 0 || vaddr >= memory.length)
         // return 0;
 
-        if (vaddr < 0 || vaddr >= pageTable.length * pageSize)
+        if (vaddr < 0 || vaddr >= getMaxVirtualAddr())
             return 0;
 
         // int amount = Math.min(length, memory.length - vaddr);
 
-        int amount = Math.min(length, pageTable.length * pageSize - vaddr);
+        int amount = Math.min(length, getMaxVirtualAddr() - vaddr);
 
         // for (int i = offset; i < amount; i++) {
         // memory[pageTable[vaddr + i].ppn] = data[i];
@@ -250,6 +257,9 @@ public class UserProcess {
 
             int remaining = amount - (i * pageSize);
             int readLimit = Math.min(pageSize, remaining);
+
+            pageTable[vpn].used = true;
+            pageTable[vpn].dirty = true;
 
             for (int j = 0; j < readLimit; j++) {
 
@@ -482,11 +492,9 @@ public class UserProcess {
         if (fileDescriptor != 0)
             return -1;
 
-        OpenFile file = UserKernel.console.openForReading();
         byte[] buf = Machine.processor().getMemory();
 
-        int readSize = file.read(buf, buffer, size);
-        file.close();
+        int readSize = stdIn.read(buf, buffer, size);
         return readSize;
     }
 
@@ -496,10 +504,8 @@ public class UserProcess {
     private int handleWrite(int fileDescriptor, int buffer, int size) {
         if (fileDescriptor != 1)
             return -1;
-        OpenFile file = UserKernel.console.openForWriting();
         byte[] buf = Machine.processor().getMemory();
-        int writeSize = file.write(buf, buffer, size);
-        file.close();
+        int writeSize = stdOut.write(buf, buffer, size);
 
         return writeSize;
     }
@@ -511,7 +517,9 @@ public class UserProcess {
         String filename = readVirtualMemoryString(fileAddr, getMaxVirtualAddr() - fileAddr);
         if (filename == null) return -1;
         //check filename ending with coff
-        // starts with stdin opened as fileDescriptor???
+        if (!filename.endsWith(".coff"))return -1;
+
+        if (argc < 0)return -1;
 
         String args[] = new String[argc];
         for (int i = 0; i < argc; i++){
@@ -537,20 +545,19 @@ public class UserProcess {
      */
     private int handleJoin(int processIdToJoin, int statusAddr) {
         UserProcess toJoin = processIdMap.get(processIdToJoin);
-        boolean isChild = false;
-        for (int childProcessId: childProcessesId){
-            if (childProcessId == processIdToJoin){
-                isChild = true;
-                break;
-            }
-        }
+        //check if child
+        boolean isChild = childProcessesId.contains((Integer)processIdToJoin);
         if (!isChild)return -1;
 
         //wait until process over?
         toJoin.uthread.join();
 
-        int childExitStatus = toJoin.exitStatus;
-        writeVirtualMemory(statusAddr, (byte[])childExitStatus);
+        //remove from childproccesses
+        childProcessesId.remove((Integer)processIdToJoin);
+
+        Integer childExitStatus = toJoin.exitStatus;
+        
+        writeVirtualMemory(statusAddr, childExitStatus.getBytes());
 
         if (childExitStatus == 0) return 1;
         return 0;
@@ -560,24 +567,29 @@ public class UserProcess {
      * Handle the write() system call.
      */
     private void handleExit(int status) {
-        uThread.finish();
+        
         for (int childProcessId: childProcessesId){
             UserProcess childProcess = processIdMap.get(childProcessId);
             childProcess.parentProcess = null;
         }
-        childProcessesId = new ArrayList<>();
+        childProcessesId = null;
         parentProcess.childProcessesId.remove((Integer)processId);
 
         exitStatus = status;
+        this.stdIn.close();
+        this.stdOut.close();
 
         for (TranslationEntry tEntry: pageTable){
-            UserKernel.freePhysicalPages.add(tEntry.ppn);
-            Machine.processor().getMemory()[ppn] = 0;
+            if (tEntry.valid){
+                UserKernel.freePhysicalPages.add(tEntry.ppn);
+            }
         }
 
 
         activeProcesses--;
         if (activeProcesses == 0)Kernel.kernel.terminate();
+
+        KThread.finish();
 
 
     }
@@ -689,6 +701,8 @@ public class UserProcess {
                 break;
 
             default:
+                System.out.println("UNHANDLED EXCEPTION");
+                handleExit(-1);
                 Lib.debug(dbgProcess, "Unexpected exception: " + Processor.exceptionNames[cause]);
                 Lib.assertNotReached("Unexpected exception");
         }
@@ -730,6 +744,8 @@ public class UserProcess {
     public static HashMap<ProcessId, UserProcess> processIdMap = new HashMap<>();
     private int processId;
     public UThread uThread;
+    
+    private OpenFile stdIn, stdOut;
 
     public int exitStatus;
     
