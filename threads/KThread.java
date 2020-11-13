@@ -164,13 +164,8 @@ public class KThread {
     private void runThread() {
         begin();
         target.run();
-        
-        if (sleepingThread != null) {   //doing this here because finish() and sleep() are both static methods 
-            // sleeping thread was waiting for this thread to finish, so make it ready
-            Machine.interrupt().disable();
-            sleepingThread.ready();
-            Machine.interrupt().enable();
-        }
+        wakeSleepingThread();
+
         finish();
     }
 
@@ -195,6 +190,7 @@ public class KThread {
      * this thread.
      */
     public static void finish() {
+        System.out.println("FINISH CALLLEDDDD");
         Lib.debug(dbgThread, "Finishing thread: " + currentThread.toString());
 
         Machine.interrupt().disable();
@@ -205,8 +201,6 @@ public class KThread {
         toBeDestroyed = currentThread;
 
         currentThread.status = statusFinished;
-
-       
 
         sleep();
     }
@@ -333,6 +327,17 @@ public class KThread {
         Machine.interrupt().enable();
 
         // if this (b) is done running, do caller.ready() in finish();
+
+    }
+
+    public void wakeSleepingThread() {
+
+        if (sleepingThread != null) { // doing this here because finish() and sleep() are both static methods
+            // sleeping thread was waiting for this thread to finish, so make it ready
+            Machine.interrupt().disable();
+            sleepingThread.ready();
+            Machine.interrupt().enable();
+        }
 
     }
 

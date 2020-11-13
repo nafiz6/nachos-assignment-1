@@ -37,7 +37,6 @@ public class UserProcess {
         stdIn = UserKernel.console.openForReading();
         stdOut = UserKernel.console.openForWriting();
 
-
         // on context switches, this pageTable gets saved onto processor
 
         pageTable = new TranslationEntry[numPhysPages];
@@ -78,7 +77,6 @@ public class UserProcess {
         uThread = new UThread(this).setName(name);
         uThread.fork();
         activeProcesses++;
-
 
         return true;
     }
@@ -180,29 +178,42 @@ public class UserProcess {
         int pagesToRead = amount / pageSize;
         int firstPage = vaddr / pageSize;
 
-        for (int i = 0; i < pagesToRead; i++) {
-            int vpn = firstPage + i ;
+        int startOffset = vaddr % pageSize;
+
+        for (int i = 0; i <= pagesToRead; i++) {
+
+            int vpn = firstPage + i;
 
             int remaining = amount - (i * pageSize);
-            int readLimit = Math.min(pageSize, remaining);                
+            int readLimit = Math.min(pageSize, remaining);
 
             pageTable[vpn].used = true;
-            
-            System.arraycopy(memory, pageTable[vpn].ppn * pageSize, data, offset + i * pageSize, readLimit);
-            /*
-            for (int j = 0; j < readLimit; j++) {
 
-                int physicalMemoryIndex = pageTable[vpn].ppn * pageSize + j;
+            // bug when vaddr isnt start of page
 
-                int dataIndex = offset + i * pageSize + j;
-
-                data[dataIndex] = memory[physicalMemoryIndex];
+            int start = pageTable[vpn].ppn * pageSize; // if page isnt first page, start will always be start of page
+            if (i == 0) {
+                // this is first page accessed, so take startOffset into account
+                start = pageTable[vpn].ppn * pageSize + startOffset;
+                // readLimit -= startOffset;
 
             }
-            */
+
+            System.arraycopy(memory, start, data, offset + i * pageSize, readLimit);
+
+            // for (int j = 0; j < readLimit; j++) {
+
+            // int physicalMemoryIndex = pageTable[vpn].ppn * pageSize + j;
+
+            // // System.out.println(physicalMemoryIndex);
+
+            // int dataIndex = offset + i * pageSize + j;
+
+            // data[dataIndex] = memory[physicalMemoryIndex];
+
+            // }
 
         }
-        
 
         // System.arraycopy(memory, vaddr, data, offset, amounVt);
 
@@ -235,9 +246,10 @@ public class UserProcess {
      * @return the number of bytes successfully transferred.
      */
     public int writeVirtualMemory(int vaddr, byte[] data, int offset, int length) {
+
         Lib.assertTrue(offset >= 0 && length >= 0 && offset + length <= data.length);
-        System.out.println("WRITE VM USED");
-        System.out.flush();
+        // System.out.println("WRITE VM USED");
+        // System.out.flush();
 
         byte[] memory = Machine.processor().getMemory();
 
@@ -259,14 +271,19 @@ public class UserProcess {
 
         // int bytesWritten = amount;
 
-        for (int i = 0; i < amount / pageSize; i++) {
+        int pagesToRead = amount / pageSize;
+        int firstPage = vaddr / pageSize;
+
+        int startOffset = vaddr % pageSize;
+
+        for (int i = 0; i <= pagesToRead; i++) {
 
             // if (pageTable[i + vaddr].readOnly) {
-            //     // cant write to this page, so skip
-            //     bytesWritten = bytesWritten - pageSize;
-            //     continue;
+            // // cant write to this page, so skip
+            // bytesWritten = bytesWritten - pageSize;
+            // continue;
             // }
-            int vpn = (vaddr / pageSize) + i;
+            int vpn = firstPage + i;
 
             int remaining = amount - (i * pageSize);
             int writeLimit = Math.min(pageSize, remaining);
@@ -274,17 +291,24 @@ public class UserProcess {
             pageTable[vpn].used = true;
             pageTable[vpn].dirty = true;
 
-            System.arraycopy(data, offset + i * pageSize, memory, pageTable[vpn].ppn * pageSize, writeLimit);
-            /*
-            for (int j = 0; j < readLimit; j++) {
+            int start = pageTable[vpn].ppn * pageSize; // if page isnt first page, start will always be start of page
+            if (i == 0) {
+                // this is first page accessed, so take startOffset into account
+                start = pageTable[vpn].ppn * pageSize + startOffset;
+                // writeLimit -= startOffset;
 
-                int physicalMemoryIndex = pageTable[vpn].ppn * pageSize + j;
-
-                int dataIndex = offset + i * pageSize + j;
-
-                memory[physicalMemoryIndex] = data[dataIndex];
             }
-            */
+
+            System.arraycopy(data, offset + i * pageSize, memory, start, writeLimit);
+            /*
+             * for (int j = 0; j < readLimit; j++) {
+             * 
+             * int physicalMemoryIndex = pageTable[vpn].ppn * pageSize + j;
+             * 
+             * int dataIndex = offset + i * pageSize + j;
+             * 
+             * memory[physicalMemoryIndex] = data[dataIndex]; }
+             */
 
         }
 
@@ -394,13 +418,13 @@ public class UserProcess {
             return false;
         }
 
-
-        //add
+        // add
         // setup pageTable here, which maps i vpn to i ppn in constructor
         // get free spaces from UKernel.freePages, and add these to pageTable's entries'
         // ppn's
-        // int stackPages = 8; // this many pages are allocated for this process apart from the space it
-                            // already ends up taking at load time, not sure about this yet
+        // int stackPages = 8; // this many pages are allocated for this process apart
+        // from the space it
+        // already ends up taking at load time, not sure about this yet
 
         if (numPages > UserKernel.freePhysicalPages.size()) {
             coff.close();
@@ -408,7 +432,6 @@ public class UserProcess {
             return false;
 
         }
-        
 
         for (int i = 0; i < pageTable.length; i++) {
 
@@ -416,11 +439,11 @@ public class UserProcess {
                 pageTable[i].valid = false;
 
             } else {
-                pageTable[i].ppn = UserKernel.freePhysicalPages.removeFirst();
-               
+                pageTable[i].ppn = UserKernel.freePhysicalPages.removeLast();
+
             }
         }
-        //end
+        // end
 
         // load sections
 
@@ -432,21 +455,21 @@ public class UserProcess {
 
             for (int i = 0; i < section.getLength(); i++) {
 
-                int vpn = section.getFirstVPN() + i;    //we assume that they know that our pageTable config
+                int vpn = section.getFirstVPN() + i; // we assume that they know that our pageTable config
 
-                //add
+                // add
                 pageTable[vpn].readOnly = section.isReadOnly();
                 // pageTable[vpn].valid = section.isInitialzed(); // not sure about this yet
 
                 int ppn = pageTable[vpn].ppn;
 
-                //end
+                // end
                 // for now, just assume virtual addresses=physical addresses
                 // section.loadPage(i, vpn);
-                //add
+                // add
                 section.loadPage(i, ppn);
 
-                //end
+                // end
             }
         }
 
@@ -508,31 +531,37 @@ public class UserProcess {
         if (fileDescriptor != 0)
             return -1;
 
-        byte[] buf = Machine.processor().getMemory();
-        //byte[] buf = new byte[size];
+        if (size < 0) {
+            return -1;
+        }
 
-        int readSize = stdIn.read(buf, bufferAddr, size);
-        //writeVirtualMemory(bufferAddr, buf);
-        
+        // byte[] buf = Machine.processor().getMemory();
+        byte[] buf = new byte[size];
 
-        System.out.println("TESTINGGG " + readVirtualMemoryString(bufferAddr, size));
+        int readSize = stdIn.read(buf, 0, size);
+        int bytesWritten = writeVirtualMemory(bufferAddr, buf);
 
+        // System.out.println("TESTINGGG " + readVirtualMemoryString(bufferAddr, size));
 
-        return readSize;
+        return bytesWritten;
     }
 
     /**
      * Handle the write() system call.
      */
     private int handleWrite(int fileDescriptor, int bufferAddr, int size) {
-        System.out.println("BUFFADDR write" + bufferAddr);//5120
+        // System.out.println("BUFFADDR write" + bufferAddr);//5120
         if (fileDescriptor != 1)
             return -1;
-        byte[] buf = Machine.processor().getMemory();
-        //byte[] buf = new byte[size];
-        //int amountRead = readVirtualMemory(bufferAddr, buf);
-        int writeSize = stdOut.write(buf, bufferAddr, size);
 
+        if (size < 0) {
+            return -1;
+        }
+
+        // byte[] buf = Machine.processor().getMemory();
+        byte[] buf = new byte[size];
+        int amountRead = readVirtualMemory(bufferAddr, buf);
+        int writeSize = stdOut.write(buf, 0, amountRead);
 
         return writeSize;
     }
@@ -541,34 +570,39 @@ public class UserProcess {
      * Handle the exec() system call.
      */
     private int handleExec(int fileAddr, int argc, int argvAddr) {
-        System.out.println("HANDLE EXEC CALLED");
+        // System.out.println("HANDLE EXEC CALLED");
         String filename = readVirtualMemoryString(fileAddr, getMaxVirtualAddr() - fileAddr);
-        System.out.println("FILENAMESTART" + filename + "FILENAMEEND");
-        if (filename == null) return -1;
-        //check filename ending with coff
-        if (!filename.endsWith(".coff"))return -1;
+        // System.out.println("FILENAMESTART" + filename + "FILENAMEEND");
+        if (filename == null)
+            return -1;
+        // check filename ending with coff
+        if (!filename.endsWith(".coff"))
+            return -1;
 
-        if (argc < 0)return -1;
-        System.out.println("FILENAME " + filename);
+        if (argc < 0)
+            return -1;
+        // System.out.println("FILENAME " + filename);
 
         String args[] = new String[argc];
-        for (int i = 0; i < argc; i++){
+        for (int i = 0; i < argc; i++) {
             args[i] = readVirtualMemoryString(argvAddr, getMaxVirtualAddr() - argvAddr);
 
-            if (args[i] == null) return -1;
+            if (args[i] == null)
+                return -1;
 
             argvAddr += args[i].getBytes().length;
         }
-        System.out.println("READ ARGS");
+        // System.out.println("READ ARGS");
 
         UserProcess process = UserProcess.newUserProcess();
         process.parentProcess = this;
         childProcessesId.add(process.processId);
-        
-        boolean created = process.execute(filename, args);
-        if (!created)return -1;
 
-        return process.getProcessId();                
+        boolean created = process.execute(filename, args);
+        if (!created)
+            return -1;
+
+        return process.getProcessId();
     }
 
     /**
@@ -583,6 +617,7 @@ public class UserProcess {
 
         // wait until process over?
         toJoin.uThread.join();
+        System.out.println("JOIN ENDED");
 
         // remove from childproccesses
         childProcessesId.remove((Integer) processIdToJoin);
@@ -603,31 +638,39 @@ public class UserProcess {
      * Handle the write() system call.
      */
     private void handleExit(int status) {
+
         
-        for (int childProcessId: childProcessesId){
+
+        for (int childProcessId : childProcessesId) {
             UserProcess childProcess = processIdMap.get(childProcessId);
             childProcess.parentProcess = null;
         }
         childProcessesId = null;
         if (!(rootProcess == this))
-            parentProcess.childProcessesId.remove((Integer)processId);
+            parentProcess.childProcessesId.remove((Integer) processId);
 
         exitStatus = status;
         this.stdIn.close();
         this.stdOut.close();
 
-        for (TranslationEntry tEntry: pageTable){
-            if (tEntry.valid){
+        for (TranslationEntry tEntry : pageTable) {
+            if (tEntry.valid) {
                 UserKernel.freePhysicalPages.add(tEntry.ppn);
             }
         }
 
 
+        
         activeProcesses--;
-        if (activeProcesses == 0)Kernel.kernel.terminate();
+
+        uThread.wakeSleepingThread();
+        
+        if (activeProcesses == 0)
+            Kernel.kernel.terminate();
+
+        
 
         KThread.finish();
-
 
     }
 
@@ -745,11 +788,11 @@ public class UserProcess {
         }
     }
 
-    public int getMaxVirtualAddr(){
+    public int getMaxVirtualAddr() {
         return numPages * pageSize;
     }
 
-    public int getProcessId(){
+    public int getProcessId() {
         return processId;
     }
 
@@ -770,20 +813,20 @@ public class UserProcess {
     private static final int pageSize = Processor.pageSize;
     private static final char dbgProcess = 'a';
 
-    //added
+    // added
     private static UserProcess rootProcess = null;
 
     public UserProcess parentProcess;
-    public List<Integer > childProcessesId;
+    public List<Integer> childProcessesId;
 
     public static int processCount = 0;
     public static int activeProcesses = 0;
     public static HashMap<Integer, UserProcess> processIdMap = new HashMap<>();
     private int processId;
     public KThread uThread;
-    
+
     private OpenFile stdIn, stdOut;
 
     public int exitStatus;
-    
+
 }

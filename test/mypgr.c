@@ -20,12 +20,12 @@ void main()
     printf("mypgr forking echo.coff and joining... \n");
 
 
-/*
+
     int a = 5;
     printf("%d", a);
-    */
+    
 
-/*
+
     char* c[100];
     readline(&c,  100);
     printf("%s", c);
@@ -51,7 +51,7 @@ void main()
     printf("*********   Join On Process %d Finished\nStatus Value:  %d   ***************\n", processID1, status1);
     //printf("*********   Join On Process %d Finished\nStatus Value:  %d   ***************\n", processID2, status2);
     
-    */
+    
     halt();
     /* not reached */
 }
