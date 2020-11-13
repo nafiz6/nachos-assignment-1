@@ -66,7 +66,7 @@ public class UserKernel extends ThreadedKernel {
             console.writeByte(c);
         } while (c != 'q');
 
-        System.out.println("Q PRESSED");
+        System.out.println();
     }
 
     /**

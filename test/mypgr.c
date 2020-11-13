@@ -20,20 +20,14 @@ void main()
     printf("mypgr forking echo.coff and joining... \n");
 
 
-
-    int a = 5;
-    printf("%d", a);
-    
-
-
     char* c[100];
+    printf("Enter a word: ");
     readline(&c,  100);
-    printf("%s", c);
+    printf("\nEchoing word: %s\n", c);
 
     char *execArgs[256];
     int status1,processID, processID1, processID2, status2;
     processID = exec("echo.coff", 1,  execArgs);
-    printf("EXECED");
 
     int k = join(processID, &status1);
     printf("********* Join On Process %d Finished\nStatus Value:  %d    ***************\n", processID, status1);

@@ -78,8 +78,6 @@ public class UserProcess {
      * @return <tt>true</tt> if the program was successfully executed.
      */
     public boolean execute(String name, String[] args) {
-        System.out.println(name);
-        System.out.flush();
         if (!load(name, args))
             return false;
 
@@ -127,7 +125,6 @@ public class UserProcess {
         int bytesRead = readVirtualMemory(vaddr, bytes);
 
         for (int length = 0; length < bytesRead; length++) {
-            System.out.println(bytes[length]);
             if (bytes[length] == 0)
                 return new String(bytes, 0, length);
         }
@@ -176,13 +173,13 @@ public class UserProcess {
         // return 0;
 
         // added
-        if (vaddr < 0 || vaddr >= getMaxVirtualAddr())
+        if (vaddr < 0 || vaddr > getMaxVirtualAddr())
             return 0;
         // end
 
         // int amount = Math.min(length, memory.length - vaddr);
         // added
-        int amount = Math.min(length, getMaxVirtualAddr() - vaddr); // so if length is such that writing exceeds
+        int amount = Math.min(length, getMaxVirtualAddr() - vaddr + 1); // so if length is such that writing exceeds
         // physical/virtual memory bounds, then only read upto
         // max memory index
         // added
@@ -268,12 +265,12 @@ public class UserProcess {
         // if (vaddr < 0 || vaddr >= memory.length)
         // return 0;
 
-        if (vaddr < 0 || vaddr >= getMaxVirtualAddr())
+        if (vaddr < 0 || vaddr > getMaxVirtualAddr())
             return 0;
 
         // int amount = Math.min(length, memory.length - vaddr);
 
-        int amount = Math.min(length, getMaxVirtualAddr() - vaddr);
+        int amount = Math.min(length, getMaxVirtualAddr() - vaddr + 1);
 
         // for (int i = offset; i < amount; i++) {
         // memory[pageTable[vaddr + i].ppn] = data[i];
@@ -530,8 +527,6 @@ public class UserProcess {
         if (this != rootProcess)
             return 0;
 
-        System.out.println("HALT CALLED");
-        System.out.flush();
         Machine.halt();
 
         Lib.assertNotReached("Machine.halt() did not halt machine!");
@@ -547,6 +542,10 @@ public class UserProcess {
             return -1;
 
         if (size < 0) {
+            return -1;
+        }
+
+        if (bufferAddr < 0 || bufferAddr > getMaxVirtualAddr()){
             return -1;
         }
 
@@ -575,6 +574,10 @@ public class UserProcess {
             return -1;
         }
 
+        if (bufferAddr < 0 || bufferAddr > getMaxVirtualAddr()){
+            return -1;
+        }
+
         // byte[] buf = Machine.processor().getMemory();
         byte[] buf = new byte[size];
         int amountRead = readVirtualMemory(bufferAddr, buf);
@@ -589,7 +592,7 @@ public class UserProcess {
      */
     private int handleExec(int fileAddr, int argc, int argvAddr) {
         // System.out.println("HANDLE EXEC CALLED");
-        String filename = readVirtualMemoryString(fileAddr, getMaxVirtualAddr() - fileAddr);
+        String filename = readVirtualMemoryString(fileAddr, getMaxVirtualAddr() - fileAddr + 1);
         // System.out.println("FILENAMESTART" + filename + "FILENAMEEND");
         if (filename == null)
             return -1;
@@ -603,7 +606,7 @@ public class UserProcess {
 
         String args[] = new String[argc];
         for (int i = 0; i < argc; i++) {
-            args[i] = readVirtualMemoryString(argvAddr, getMaxVirtualAddr() - argvAddr);
+            args[i] = readVirtualMemoryString(argvAddr, getMaxVirtualAddr() - argvAddr + 1);
 
             if (args[i] == null)
                 return -1;
@@ -635,7 +638,7 @@ public class UserProcess {
 
         // wait until process over?
         toJoin.uThread.join();
-        System.out.println("JOIN ENDED");
+        //System.out.println("JOIN ENDED");
 
         // remove from childproccesses
         childProcessesId.remove((Integer) processIdToJoin);
@@ -811,7 +814,7 @@ public class UserProcess {
     }
 
     public int getMaxVirtualAddr() {
-        return numPages * pageSize;
+        return numPages * pageSize - 1;
     }
 
     public int getProcessId() {
