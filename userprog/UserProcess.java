@@ -5,6 +5,7 @@ import nachos.threads.*;
 import nachos.userprog.*;
 
 import java.io.EOFException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -74,7 +75,8 @@ public class UserProcess {
         if (!load(name, args))
             return false;
 
-        uThread = new UThread(this).setName(name).fork();
+        uThread = new UThread(this).setName(name);
+        uThread.fork();
         activeProcesses++;
 
 
@@ -116,6 +118,7 @@ public class UserProcess {
         int bytesRead = readVirtualMemory(vaddr, bytes);
 
         for (int length = 0; length < bytesRead; length++) {
+            System.out.println(bytes[length]);
             if (bytes[length] == 0)
                 return new String(bytes, 0, length);
         }
@@ -174,26 +177,34 @@ public class UserProcess {
         // physical/virtual memory bounds, then only read upto
         // max memory index
         // added
+        int pagesToRead = amount / pageSize;
+        int firstPage = vaddr / pageSize;
 
-        for (int i = 0; i < amount / pageSize; i++) {
-            int vpn = vaddr * pageSize + i;
+        for (int i = 0; i < pagesToRead; i++) {
+            int vpn = firstPage + i ;
 
             int remaining = amount - (i * pageSize);
             int readLimit = Math.min(pageSize, remaining);                
+
             pageTable[vpn].used = true;
+            
+            System.arraycopy(memory, pageTable[vpn].ppn * pageSize, data, offset + i * pageSize, readLimit);
+            /*
             for (int j = 0; j < readLimit; j++) {
 
-                int physicalMemoryIndex = pageTable[vpn].ppn + j;
+                int physicalMemoryIndex = pageTable[vpn].ppn * pageSize + j;
 
                 int dataIndex = offset + i * pageSize + j;
 
                 data[dataIndex] = memory[physicalMemoryIndex];
 
             }
+            */
 
         }
+        
 
-        // System.arraycopy(memory, vaddr, data, offset, amount);
+        // System.arraycopy(memory, vaddr, data, offset, amounVt);
 
         return amount;
     }
@@ -225,6 +236,8 @@ public class UserProcess {
      */
     public int writeVirtualMemory(int vaddr, byte[] data, int offset, int length) {
         Lib.assertTrue(offset >= 0 && length >= 0 && offset + length <= data.length);
+        System.out.println("WRITE VM USED");
+        System.out.flush();
 
         byte[] memory = Machine.processor().getMemory();
 
@@ -253,22 +266,25 @@ public class UserProcess {
             //     bytesWritten = bytesWritten - pageSize;
             //     continue;
             // }
-            int vpn = vaddr * pageSize + i;
+            int vpn = (vaddr / pageSize) + i;
 
             int remaining = amount - (i * pageSize);
-            int readLimit = Math.min(pageSize, remaining);
+            int writeLimit = Math.min(pageSize, remaining);
 
             pageTable[vpn].used = true;
             pageTable[vpn].dirty = true;
 
+            System.arraycopy(data, offset + i * pageSize, memory, pageTable[vpn].ppn * pageSize, writeLimit);
+            /*
             for (int j = 0; j < readLimit; j++) {
 
-                int physicalMemoryIndex = pageTable[vpn].ppn + j;
+                int physicalMemoryIndex = pageTable[vpn].ppn * pageSize + j;
 
                 int dataIndex = offset + i * pageSize + j;
 
                 memory[physicalMemoryIndex] = data[dataIndex];
             }
+            */
 
         }
 
@@ -488,24 +504,35 @@ public class UserProcess {
     /**
      * Handle the read() system call.
      */
-    private int handleRead(int fileDescriptor, int buffer, int size) {
+    private int handleRead(int fileDescriptor, int bufferAddr, int size) {
         if (fileDescriptor != 0)
             return -1;
 
         byte[] buf = Machine.processor().getMemory();
+        //byte[] buf = new byte[size];
 
-        int readSize = stdIn.read(buf, buffer, size);
+        int readSize = stdIn.read(buf, bufferAddr, size);
+        //writeVirtualMemory(bufferAddr, buf);
+        
+
+        System.out.println("TESTINGGG " + readVirtualMemoryString(bufferAddr, size));
+
+
         return readSize;
     }
 
     /**
      * Handle the write() system call.
      */
-    private int handleWrite(int fileDescriptor, int buffer, int size) {
+    private int handleWrite(int fileDescriptor, int bufferAddr, int size) {
+        System.out.println("BUFFADDR write" + bufferAddr);//5120
         if (fileDescriptor != 1)
             return -1;
         byte[] buf = Machine.processor().getMemory();
-        int writeSize = stdOut.write(buf, buffer, size);
+        //byte[] buf = new byte[size];
+        //int amountRead = readVirtualMemory(bufferAddr, buf);
+        int writeSize = stdOut.write(buf, bufferAddr, size);
+
 
         return writeSize;
     }
@@ -514,12 +541,15 @@ public class UserProcess {
      * Handle the exec() system call.
      */
     private int handleExec(int fileAddr, int argc, int argvAddr) {
+        System.out.println("HANDLE EXEC CALLED");
         String filename = readVirtualMemoryString(fileAddr, getMaxVirtualAddr() - fileAddr);
+        System.out.println("FILENAMESTART" + filename + "FILENAMEEND");
         if (filename == null) return -1;
         //check filename ending with coff
         if (!filename.endsWith(".coff"))return -1;
 
         if (argc < 0)return -1;
+        System.out.println("FILENAME " + filename);
 
         String args[] = new String[argc];
         for (int i = 0; i < argc; i++){
@@ -529,6 +559,7 @@ public class UserProcess {
 
             argvAddr += args[i].getBytes().length;
         }
+        System.out.println("READ ARGS");
 
         UserProcess process = UserProcess.newUserProcess();
         process.parentProcess = this;
@@ -545,21 +576,26 @@ public class UserProcess {
      */
     private int handleJoin(int processIdToJoin, int statusAddr) {
         UserProcess toJoin = processIdMap.get(processIdToJoin);
-        //check if child
-        boolean isChild = childProcessesId.contains((Integer)processIdToJoin);
-        if (!isChild)return -1;
+        // check if child
+        boolean isChild = childProcessesId.contains((Integer) processIdToJoin);
+        if (!isChild)
+            return -1;
 
-        //wait until process over?
-        toJoin.uthread.join();
+        // wait until process over?
+        toJoin.uThread.join();
 
-        //remove from childproccesses
-        childProcessesId.remove((Integer)processIdToJoin);
+        // remove from childproccesses
+        childProcessesId.remove((Integer) processIdToJoin);
 
         Integer childExitStatus = toJoin.exitStatus;
-        
-        writeVirtualMemory(statusAddr, childExitStatus.getBytes());
 
-        if (childExitStatus == 0) return 1;
+        ByteBuffer bb = ByteBuffer.allocate(4);
+        bb.putInt(childExitStatus);
+
+        writeVirtualMemory(statusAddr, bb.array());
+
+        if (childExitStatus == 0)
+            return 1;
         return 0;
     }
 
@@ -573,7 +609,8 @@ public class UserProcess {
             childProcess.parentProcess = null;
         }
         childProcessesId = null;
-        parentProcess.childProcessesId.remove((Integer)processId);
+        if (!(rootProcess == this))
+            parentProcess.childProcessesId.remove((Integer)processId);
 
         exitStatus = status;
         this.stdIn.close();
@@ -741,9 +778,9 @@ public class UserProcess {
 
     public static int processCount = 0;
     public static int activeProcesses = 0;
-    public static HashMap<ProcessId, UserProcess> processIdMap = new HashMap<>();
+    public static HashMap<Integer, UserProcess> processIdMap = new HashMap<>();
     private int processId;
-    public UThread uThread;
+    public KThread uThread;
     
     private OpenFile stdIn, stdOut;
 

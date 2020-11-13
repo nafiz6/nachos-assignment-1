@@ -6,9 +6,11 @@ import nachos.machine.*;
 public class Test {
 
     public static void initiateTest() {
+        /*
         new JoinTest().performTest();
         new Condition2Test().performTest();
         new AlarmTest().performTest();
+        */
     }
 
 }
