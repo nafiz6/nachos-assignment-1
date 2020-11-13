@@ -5,7 +5,6 @@ import nachos.threads.*;
 import nachos.userprog.*;
 
 import java.io.EOFException;
-import java.io.FileDescriptor;
 
 /**
  * Encapsulates the state of a user process that is not contained in its user
@@ -25,6 +24,10 @@ public class UserProcess {
      */
     public UserProcess() {
         int numPhysPages = Machine.processor().getNumPhysPages();
+        childProcesses = new ArrayList<>();
+        processId = processCount;
+        processCount++;
+        processIdMap.put(processId, this);
 
         // on context switches, this pageTable gets saved onto processor
 
@@ -498,6 +501,59 @@ public class UserProcess {
         return writeSize;
     }
 
+    /**
+     * Handle the exec() system call.
+     */
+    private int handleExec(int fileAddr, int argc, int argvAddr) {
+        String filename = readVirtualMemoryString(fileAddr, getMaxVirtualAddr() - fileAddr);
+        if (filename == null) return -1;
+        //check filename ending with coff
+
+        String args[] = new String[argc];
+        for (int i = 0; i < argc; i++){
+            args[i] = readVirtualMemoryString(argvAddr, getMaxVirtualAddr() - argvAddr);
+
+            if (args[i] == null) return -1;
+
+            argvAddr += args[i].getBytes().length;
+        }
+
+        UserProcess process = UserProcess.newUserProcess();
+        process.parentProcess = this;
+        childProcesses.add(process);
+        
+        boolean created = process.execute(filename, args);
+        if (!created)return -1;
+
+        return process.getProcessId();                
+    }
+
+    /**
+     * Handle the join() system call.
+     */
+    private int handleJoin(int processId, int statusAddr) {
+        Process toJoin = processIdMap.get(processId);
+        //wait until process over?
+        
+
+
+
+    }
+
+    /**
+     * Handle the write() system call.
+     */
+    private int handleExit() {
+        if (fileDescriptor != 1)
+            return -1;
+        OpenFile file = UserKernel.console.openForWriting();
+        byte[] buf = Machine.processor().getMemory();
+        int writeSize = file.write(buf, buffer, size);
+        file.close();
+
+        return writeSize;
+    }
+
     private static final int syscallHalt = 0, syscallExit = 1, syscallExec = 2, syscallJoin = 3, syscallCreate = 4,
             syscallOpen = 5, syscallRead = 6, syscallWrite = 7, syscallClose = 8, syscallUnlink = 9;
 
@@ -570,6 +626,12 @@ public class UserProcess {
                 return handleRead(a0, a1, a2);
             case syscallWrite:
                 return handleWrite(a0, a1, a2);
+            case syscallExec:
+                return handleExec(a0, a1, a2);
+            case syscallJoin:
+                return handleJoin(a0, a1);
+            case syscallExit:
+                return handleExit();
 
             default:
                 Lib.debug(dbgProcess, "Unknown syscall " + syscall);
@@ -603,6 +665,14 @@ public class UserProcess {
         }
     }
 
+    public int getMaxVirtualAddr(){
+        return numPages * pageSize;
+    }
+
+    public int getProcessId(){
+        return processId;
+    }
+
     /** The program being run by this process. */
     protected Coff coff;
 
@@ -620,4 +690,11 @@ public class UserProcess {
     private static final int pageSize = Processor.pageSize;
     private static final char dbgProcess = 'a';
     private static UserProcess rootProcess = null;
+
+    public Process parentProcess;
+    public List<Process > childProcesses;
+
+    public static int processCount = 0;
+    private int processId;
+    public static HashMap<ProcessId, Process> processIdMap = new HashMap<>();
 }
