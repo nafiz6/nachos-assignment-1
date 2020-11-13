@@ -5,6 +5,7 @@ import nachos.threads.*;
 import nachos.userprog.*;
 
 import java.io.EOFException;
+import java.util.HashSet;
 
 /**
  * Encapsulates the state of a user process that is not contained in its user
@@ -24,7 +25,7 @@ public class UserProcess {
      */
     public UserProcess() {
         int numPhysPages = Machine.processor().getNumPhysPages();
-        childProcesses = new ArrayList<>();
+        childProcessesId = new ArrayList<>();
         processId = processCount;
         processCount++;
         processIdMap.put(processId, this);
@@ -66,7 +67,9 @@ public class UserProcess {
         if (!load(name, args))
             return false;
 
-        new UThread(this).setName(name).fork();
+        uThread = new UThread(this).setName(name).fork();
+        activeProcesses++;
+
 
         return true;
     }
@@ -508,6 +511,7 @@ public class UserProcess {
         String filename = readVirtualMemoryString(fileAddr, getMaxVirtualAddr() - fileAddr);
         if (filename == null) return -1;
         //check filename ending with coff
+        // starts with stdin opened as fileDescriptor???
 
         String args[] = new String[argc];
         for (int i = 0; i < argc; i++){
@@ -520,7 +524,7 @@ public class UserProcess {
 
         UserProcess process = UserProcess.newUserProcess();
         process.parentProcess = this;
-        childProcesses.add(process);
+        childProcessesId.add(process.processId);
         
         boolean created = process.execute(filename, args);
         if (!created)return -1;
@@ -531,27 +535,51 @@ public class UserProcess {
     /**
      * Handle the join() system call.
      */
-    private int handleJoin(int processId, int statusAddr) {
-        Process toJoin = processIdMap.get(processId);
+    private int handleJoin(int processIdToJoin, int statusAddr) {
+        UserProcess toJoin = processIdMap.get(processIdToJoin);
+        boolean isChild = false;
+        for (int childProcessId: childProcessesId){
+            if (childProcessId == processIdToJoin){
+                isChild = true;
+                break;
+            }
+        }
+        if (!isChild)return -1;
+
         //wait until process over?
-        
+        toJoin.uthread.join();
 
+        int childExitStatus = toJoin.exitStatus;
+        writeVirtualMemory(statusAddr, (byte[])childExitStatus);
 
-
+        if (childExitStatus == 0) return 1;
+        return 0;
     }
 
     /**
      * Handle the write() system call.
      */
-    private int handleExit() {
-        if (fileDescriptor != 1)
-            return -1;
-        OpenFile file = UserKernel.console.openForWriting();
-        byte[] buf = Machine.processor().getMemory();
-        int writeSize = file.write(buf, buffer, size);
-        file.close();
+    private void handleExit(int status) {
+        uThread.finish();
+        for (int childProcessId: childProcessesId){
+            UserProcess childProcess = processIdMap.get(childProcessId);
+            childProcess.parentProcess = null;
+        }
+        childProcessesId = new ArrayList<>();
+        parentProcess.childProcessesId.remove((Integer)processId);
 
-        return writeSize;
+        exitStatus = status;
+
+        for (TranslationEntry tEntry: pageTable){
+            UserKernel.freePhysicalPages.add(tEntry.ppn);
+            Machine.processor().getMemory()[ppn] = 0;
+        }
+
+
+        activeProcesses--;
+        if (activeProcesses == 0)Kernel.kernel.terminate();
+
+
     }
 
     private static final int syscallHalt = 0, syscallExit = 1, syscallExec = 2, syscallJoin = 3, syscallCreate = 4,
@@ -631,7 +659,8 @@ public class UserProcess {
             case syscallJoin:
                 return handleJoin(a0, a1);
             case syscallExit:
-                return handleExit();
+                handleExit(a0);
+                break;
 
             default:
                 Lib.debug(dbgProcess, "Unknown syscall " + syscall);
@@ -689,12 +718,19 @@ public class UserProcess {
 
     private static final int pageSize = Processor.pageSize;
     private static final char dbgProcess = 'a';
+
+    //added
     private static UserProcess rootProcess = null;
 
-    public Process parentProcess;
-    public List<Process > childProcesses;
+    public UserProcess parentProcess;
+    public List<Integer > childProcessesId;
 
     public static int processCount = 0;
+    public static int activeProcesses = 0;
+    public static HashMap<ProcessId, UserProcess> processIdMap = new HashMap<>();
     private int processId;
-    public static HashMap<ProcessId, Process> processIdMap = new HashMap<>();
+    public UThread uThread;
+
+    public int exitStatus;
+    
 }
