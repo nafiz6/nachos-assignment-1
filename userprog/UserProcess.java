@@ -27,11 +27,20 @@ public class UserProcess {
      * Allocate a new process.
      */
     public UserProcess() {
+
+        processCountLock = new Lock();
+        activeProcessesLock = new Lock();
+
         int numPhysPages = Machine.processor().getNumPhysPages();
         childProcessesId = new ArrayList<>();
+
+        processCountLock.acquire();
         processId = processCount;
         processCount++;
         processIdMap.put(processId, this);
+
+        processCountLock.release();
+
         exitStatus = -1;
 
         stdIn = UserKernel.console.openForReading();
@@ -76,7 +85,9 @@ public class UserProcess {
 
         uThread = new UThread(this).setName(name);
         uThread.fork();
+        activeProcessesLock.acquire();
         activeProcesses++;
+        activeProcessesLock.release();
 
         return true;
     }
@@ -426,12 +437,15 @@ public class UserProcess {
         // from the space it
         // already ends up taking at load time, not sure about this yet
 
+        UserKernel.lock.acquire();
         if (numPages > UserKernel.freePhysicalPages.size()) {
             coff.close();
             Lib.debug(dbgProcess, "\tinsufficient physical memory");
+            UserKernel.lock.release();
             return false;
 
         }
+        UserKernel.lock.release();
 
         for (int i = 0; i < pageTable.length; i++) {
 
@@ -439,8 +453,9 @@ public class UserProcess {
                 pageTable[i].valid = false;
 
             } else {
+                UserKernel.lock.acquire();
                 pageTable[i].ppn = UserKernel.freePhysicalPages.removeLast();
-
+                UserKernel.lock.release();
             }
         }
         // end
@@ -538,7 +553,9 @@ public class UserProcess {
         // byte[] buf = Machine.processor().getMemory();
         byte[] buf = new byte[size];
 
+        UserKernel.consoleLock.acquire();
         int readSize = stdIn.read(buf, 0, size);
+        UserKernel.consoleLock.release();
         int bytesWritten = writeVirtualMemory(bufferAddr, buf);
 
         // System.out.println("TESTINGGG " + readVirtualMemoryString(bufferAddr, size));
@@ -561,8 +578,9 @@ public class UserProcess {
         // byte[] buf = Machine.processor().getMemory();
         byte[] buf = new byte[size];
         int amountRead = readVirtualMemory(bufferAddr, buf);
+        UserKernel.consoleLock.acquire();
         int writeSize = stdOut.write(buf, 0, amountRead);
-
+        UserKernel.consoleLock.release();
         return writeSize;
     }
 
@@ -639,8 +657,6 @@ public class UserProcess {
      */
     private void handleExit(int status) {
 
-        
-
         for (int childProcessId : childProcessesId) {
             UserProcess childProcess = processIdMap.get(childProcessId);
             childProcess.parentProcess = null;
@@ -655,20 +671,26 @@ public class UserProcess {
 
         for (TranslationEntry tEntry : pageTable) {
             if (tEntry.valid) {
+                UserKernel.lock.acquire();
                 UserKernel.freePhysicalPages.add(tEntry.ppn);
+                UserKernel.lock.release();
             }
         }
 
-
-        
+        activeProcessesLock.acquire();
         activeProcesses--;
+        activeProcessesLock.release();
 
         uThread.wakeSleepingThread();
+
+        activeProcessesLock.acquire();
         
-        if (activeProcesses == 0)
+        if (activeProcesses == 0) {
+            activeProcessesLock.release();
             Kernel.kernel.terminate();
 
-        
+        }
+        activeProcessesLock.release();
 
         KThread.finish();
 
@@ -828,5 +850,8 @@ public class UserProcess {
     private OpenFile stdIn, stdOut;
 
     public int exitStatus;
+
+    public static Lock processCountLock;
+    public static Lock activeProcessesLock;
 
 }

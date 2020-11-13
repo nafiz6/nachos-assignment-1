@@ -18,7 +18,7 @@ public class Communicator {
     // multiple threads can use the same Communicator object, in this case they'll
     // wait until someone speaks or listens on this object too
     Condition2 listening, speaking;
-    Condition2  waitingForCommunicating, confirmCommunication; 
+    Condition2 waitingForCommunicating, confirmCommunication;
     // listeners sleep on listening, speakers sleep on speaking
     Lock lock;
     boolean communicating;
@@ -75,7 +75,6 @@ public class Communicator {
         }
         message = word;
         System.out.println(KThread.currentThread().getName() + " speaking message: " + message);
-        
 
         listeners--;
 
@@ -113,7 +112,8 @@ public class Communicator {
             listening.sleep();
         }
 
-        //listener never needs to sleep on waitingForCommunication because control reaches here only when exactly one speaker has spoken
+        // listener never needs to sleep on waitingForCommunication because control
+        // reaches here only when exactly one speaker has spoken
 
         // Lib.assertTrue(message != null);
 
@@ -122,7 +122,7 @@ public class Communicator {
 
         // need to wake speaker up to tell them that i've listened
         // if (communicating) {
-            confirmCommunication.wake();
+        confirmCommunication.wake();
         // }
 
         lock.release();

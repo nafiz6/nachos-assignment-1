@@ -26,15 +26,20 @@ public class UserKernel extends ThreadedKernel {
         super.initialize(args);
 
         console = new SynchConsole(Machine.console());
+        lock = new Lock();
+        consoleLock = new Lock();
 
 
         //added code
         // initially, all pages in phys memory are free
+        lock.acquire();
         freePhysicalPages = new LinkedList<>();
         int numPhysicalPages = Machine.processor().getNumPhysPages();
         for (int i = 0; i < numPhysicalPages; i++) {
             freePhysicalPages.add(i);   //idk if things other than user processes use memory
         }
+
+        lock.release();
 
         //end
 
@@ -128,4 +133,7 @@ public class UserKernel extends ThreadedKernel {
     private static Coff dummy1 = null;
 
     public static LinkedList<Integer> freePhysicalPages; // tells me which physical pages are free
+
+    public static Lock lock;
+    public static Lock consoleLock;
 }
