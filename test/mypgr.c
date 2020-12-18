@@ -16,15 +16,18 @@ void main()
 {
 
 
+    printf("mypgr forking echo.coff and joining... \n");
     printf("\n\n********************************** mypgr Program Loading-test **********************************\n\n");
     printf("mypgr forking echo.coff and joining... \n");
 
 
+
     char* c[100];
     printf("Enter a word: ");
-    readline(&c,  100);
+    readline(&c,  10);
     printf("\nEchoing word: %s\n", c);
 
+	/*
     char *execArgs[256];
     int status1,processID, processID1, processID2, status2;
     processID = exec("echo.coff", 1,  execArgs);
@@ -44,6 +47,7 @@ void main()
     //int m = join(processID, &status2);
     printf("*********   Join On Process %d Finished\nStatus Value:  %d   ***************\n", processID1, status1);
     //printf("*********   Join On Process %d Finished\nStatus Value:  %d   ***************\n", processID2, status2);
+	//*/
     
     
     halt();

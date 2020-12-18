@@ -41,7 +41,7 @@ public class VMProcess extends UserProcess {
 	 */
 	public void restoreState() {
 
-		super.restoreState();
+//		super.restoreState();
 	}
 
 	/**
@@ -88,7 +88,8 @@ public class VMProcess extends UserProcess {
 
 			case Processor.exceptionTLBMiss:
 
-				int vpn = processor.readRegister(Processor.regBadVAddr); // this is the vpn that caused the TLB miss
+				int vAddr = processor.readRegister(Processor.regBadVAddr); // this is the vpn that caused the TLB miss
+				int vpn = Processor.pageFromAddress(vAddr);
 
 				Pair pair = new Pair(this.getProcessId(), vpn);
 
@@ -128,12 +129,15 @@ public class VMProcess extends UserProcess {
 					} else {
 
 						CoffSection section = VMKernel.diskPageTable.get(new Pair(getProcessId(), vpn));
-						section.loadPage(vpn - section.getFirstVPN(), ppn);
+						if (section != null){
+							//cannot read from disk
+							section.loadPage(vpn - section.getFirstVPN(), ppn);
+						}
+
 
 					}
 					VMKernel.invertedPageTable.put(new Pair(getProcessId(), vpn), ppn);
 
-					// insert into TLB maybe later
 
 				}
 
@@ -168,6 +172,7 @@ public class VMProcess extends UserProcess {
 
 						if (cleanIndex < 0) {
 							// worst case, replace first for now
+							System.out.println("INSIDE WORST CASE ");
 							replaceIndex = 0;
 						} else {
 							replaceIndex = cleanIndex;
@@ -182,10 +187,149 @@ public class VMProcess extends UserProcess {
 				processor.writeTLBEntry(replaceIndex, new TranslationEntry(vpn, ppn, true, false, false, false));
 				break;
 			default:
+				System.out.println(Processor.exceptionNames[cause]);
 				super.handleException(cause);
 				break;
 		}
 	}
+
+
+    public int readVirtualMemory(int vaddr, byte[] data, int offset, int length) {
+
+        byte[] memory = Machine.processor().getMemory();
+        if (vaddr < 0 || vaddr > getMaxVirtualAddr())
+            return 0;
+        int amount = Math.min(length, getMaxVirtualAddr() - vaddr + 1);
+
+        int lastPage = (vaddr + amount) / pageSize;
+        int firstPage = vaddr / pageSize;
+        int pagesToRead = lastPage - firstPage + 1;
+
+        int startOffset = vaddr % pageSize;
+
+        int remaining = amount;
+
+        int bytesRead = 0;
+
+		Processor processor = Machine.processor();
+        for (int i = 0; i <= pagesToRead; i++) {
+
+            int vpn = firstPage + i;
+            int readLimit = Math.min(pageSize, remaining);
+
+            if(i == 0) {
+                readLimit = Math.min(pageSize - startOffset - 1 , amount);
+                
+            }
+
+            remaining -= readLimit;
+
+			TranslationEntry te = processor.readTLBEntry(0);
+
+			boolean found = false;
+			while (!found){
+				for (int t = 0; t< processor.getTLBSize(); t++){
+					te = processor.readTLBEntry(t);
+					if (te.vpn == vpn && te.valid){
+						found = true;
+						break;
+					}
+				}
+				if (!found){
+					processor.writeRegister(Processor.regBadVAddr, vpn*pageSize);
+					handleException(Processor.exceptionTLBMiss);
+
+				}
+			}
+
+
+            te.used = true;
+
+            int start = te.ppn * pageSize; // if page isnt first page, start will always be start of page
+            if (i == 0) {
+                start += startOffset;
+
+            }
+
+           
+
+            System.arraycopy(memory, start, data, offset + bytesRead, readLimit);
+            bytesRead += readLimit;
+
+        }
+
+        // System.arraycopy(memory, vaddr, data, offset, amounVt);
+
+        return amount;
+	}
+
+    public int writeVirtualMemory(int vaddr, byte[] data, int offset, int length) {
+
+        byte[] memory = Machine.processor().getMemory();
+        if (vaddr < 0 || vaddr > getMaxVirtualAddr())
+            return 0;
+        int amount = Math.min(length, getMaxVirtualAddr() - vaddr + 1);
+
+        int lastPage = (vaddr + amount) / pageSize;
+		int firstPage = vaddr / pageSize;
+        int pagesToRead = lastPage - firstPage + 1;
+
+        int startOffset = vaddr % pageSize;
+
+        int remaining = amount;
+
+        int bytesWritten = 0;
+
+		Processor processor = Machine.processor();
+        for (int i = 0; i <= pagesToRead; i++) {
+
+            int vpn = firstPage + i;
+            int writeLimit = Math.min(pageSize, remaining);
+
+            if(i == 0) {
+                writeLimit = Math.min(pageSize - startOffset - 1, amount);
+                
+            }
+
+            remaining -= writeLimit;
+
+			TranslationEntry te = processor.readTLBEntry(0);
+			boolean found = false;
+			while (!found){
+				for (int t = 0; t< processor.getTLBSize(); t++){
+					te = processor.readTLBEntry(t);
+					if (te.vpn == vpn && te.valid){
+						found = true;
+						break;
+					}
+				}
+				if (!found){
+					processor.writeRegister(Processor.regBadVAddr, vpn*pageSize);
+					handleException(Processor.exceptionTLBMiss);
+
+				}
+			}
+
+            te.used = true;
+            te.dirty = true;
+
+            int start = te.ppn * pageSize; // if page isnt first page, start will always be start of page
+            if (i == 0) {
+                start += startOffset;
+
+            }
+
+            System.arraycopy(data, offset + bytesWritten, memory, start, writeLimit);
+            bytesWritten += writeLimit;
+
+        }
+
+        // System.arraycopy(data, offset, memory, vaddr, amount);
+
+        return amount;
+    }
+
+
 
 	private static final int pageSize = Processor.pageSize;
 	private static final char dbgProcess = 'a';
