@@ -187,7 +187,6 @@ public class VMProcess extends UserProcess {
 				processor.writeTLBEntry(replaceIndex, new TranslationEntry(vpn, ppn, true, false, false, false));
 				break;
 			default:
-				System.out.println(Processor.exceptionNames[cause]);
 				super.handleException(cause);
 				break;
 		}
@@ -227,8 +226,9 @@ public class VMProcess extends UserProcess {
 			TranslationEntry te = processor.readTLBEntry(0);
 
 			boolean found = false;
+			int t=0;
 			while (!found){
-				for (int t = 0; t< processor.getTLBSize(); t++){
+				for (t = 0; t< processor.getTLBSize(); t++){
 					te = processor.readTLBEntry(t);
 					if (te.vpn == vpn && te.valid){
 						found = true;
@@ -244,6 +244,7 @@ public class VMProcess extends UserProcess {
 
 
             te.used = true;
+			processor.writeTLBEntry(t, te);
 
             int start = te.ppn * pageSize; // if page isnt first page, start will always be start of page
             if (i == 0) {
@@ -295,8 +296,9 @@ public class VMProcess extends UserProcess {
 
 			TranslationEntry te = processor.readTLBEntry(0);
 			boolean found = false;
+			int t = 0;
 			while (!found){
-				for (int t = 0; t< processor.getTLBSize(); t++){
+				for (t = 0; t< processor.getTLBSize(); t++){
 					te = processor.readTLBEntry(t);
 					if (te.vpn == vpn && te.valid){
 						found = true;
@@ -312,6 +314,7 @@ public class VMProcess extends UserProcess {
 
             te.used = true;
             te.dirty = true;
+			processor.writeTLBEntry(t, te);
 
             int start = te.ppn * pageSize; // if page isnt first page, start will always be start of page
             if (i == 0) {
