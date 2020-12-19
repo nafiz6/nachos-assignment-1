@@ -88,7 +88,7 @@ public class VMProcess extends UserProcess {
 
 			case Processor.exceptionTLBMiss:
 
-				int vAddr = processor.readRegister(Processor.regBadVAddr); // this is the vpn that caused the TLB miss
+				int vAddr = processor.readRegister(Processor.regBadVAddr); // this is the vaddr that caused the TLB miss
 				int vpn = Processor.pageFromAddress(vAddr);
 
 				Pair pair = new Pair(this.getProcessId(), vpn);
@@ -114,7 +114,6 @@ public class VMProcess extends UserProcess {
 						VMKernel.freePhysicalPages.push(entry.ppn);
 
 						entry.valid = false;
-
 						processor.writeTLBEntry(0, entry);
 
 					}
@@ -171,8 +170,6 @@ public class VMProcess extends UserProcess {
 						// no invalid and unused entries found, so try replacing one where
 
 						if (cleanIndex < 0) {
-							// worst case, replace first for now
-							System.out.println("INSIDE WORST CASE ");
 							replaceIndex = 0;
 						} else {
 							replaceIndex = cleanIndex;
