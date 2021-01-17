@@ -1,4 +1,4 @@
-                     # Nachos for Java
+# Nachos for Java
 
 
 To compile Nachos, go to the `proj1` or `proj2` directory, 
