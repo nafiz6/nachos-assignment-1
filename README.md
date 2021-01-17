@@ -19,7 +19,9 @@ You can now test Nachos from the `proj1` or `proj2` directory with:
 
 ## Assignment Tasks
 This assignment is organized in two parts.
+
 • Part 1: Threading
+
 • Part 2: Multiprogramming
 
 ## Part 1: Threading Tasks
