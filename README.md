@@ -14,15 +14,15 @@ You can now test Nachos from the `proj1` or `proj2` directory with:
 
 	`nachos`
 
-##The following tasks are completed in `proj1` and `proj2` directory
+## The following tasks are completed in `proj1` and `proj2` directory
 
 
-##Assignment Tasks
+## Assignment Tasks
 This assignment is organized in two parts.
 • Part 1: Threading
 • Part 2: Multiprogramming
 
-##Part 1: Threading Tasks
+## Part 1: Threading Tasks
 Your working directory for this part will be the proj1 directory. The files where you will code are in the
 package nachos.threads. Nachos does not fully support multiple kernel threads. In this part of the
 assignment, you will enable Nachos to support multiple kernel threads.
@@ -65,7 +65,7 @@ you're using more than one lock, you're making things too complicated.
 marks for that task. The purpose of the test code is to use the methods that you have implemented
 and demonstrate that they work.
 
-##Part 2: Multiprogramming user processes
+## Part 2: Multiprogramming user processes
 Your working directory for this part will be the proj2 directory. That is, you will go to this directory and
 type gmake clean, gmake and nachos here. The files where you add your code for this part will be
 in nachos.userprog package.
@@ -91,14 +91,14 @@ console among multiple threads
 
 The provided code can run a single user-level MIPS program at a time, and supports just one system call:
 halt. All halt does is ask the operating system to shut the machine down. This test program is found
-in test/halt.c and represents the simplest supported MIPS program.
+in `test/halt.c` and represents the simplest supported MIPS program.
 
 We have provided several other example MIPS programs in the test directory of the Nachos distribution.
 You can use these programs to test your implementation, or you can write new programs. Of course, you
 won't be able to run the programs which make use of features such as I/O until you implement the
 appropriate kernel support! That will be your task in this project.
 
-##Part 2 Tasks
+## Part 2 Tasks
 Nachos can run only one user program as a Nachos process. It can not run more than one user program.
 The goal of Part 2 is to enhance Nachos so that it can support multiple user processes.
 
